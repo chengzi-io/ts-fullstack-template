@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/tanstack",
+    "ultracite/biome/vitest"
+  ],
+  // Only negations: core already provides "**" (re-adding it fails noBiomeFirstException).
+  "files": {
+    "includes": [
+      // shadcn (CLI / monorepo shared package)
+      "!packages/ui/src/components",
+      "!packages/ui/src/lib",
+      "!packages/ui/src/hooks",
+      "!**/src/components/ui",
+      "!**/components/theme-provider.tsx",
+      // codegen & generated artifacts
+      "!**/src/gen",
+      "!**/src/generated",
+      "!**/src/__generated__",
+      "!**/*.gen.ts",
+      "!**/*.gen.tsx",
+      "!**/*.generated.ts",
+      "!**/*.generated.tsx",
+      "!**/routeTree.gen.ts",
+      "!**/graphql-env.d.ts",
+      "!**/graphql-env.ts",
+      "!**/prisma/generated",
+      "!**/drizzle/meta"
+    ]
+  }
+}
