@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/api",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "exports": {
+    ".": "./src/root.ts",
+    "./context": "./src/context.ts"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.18.0",
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "1.0.0-rc.4",
+    "superjson": "^2.2.6",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "~6"
+  }
+}
