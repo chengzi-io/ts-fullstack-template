@@ -11,7 +11,7 @@ Other packages consume this; they do **not** redefine tables or own `drizzle/` m
 | Table definitions | `src/schema/<name>.ts` (one domain per file) |
 | Client factory | `src/client.ts` → `createDb(url)` (`@workspace/db`) |
 | Schema import path | `@workspace/db/schema/<name>` (no barrel `index.ts`) |
-| Migrations (commit these) | `drizzle/**` |
+| Migrations (real project only) | `drizzle/**` |
 | Kit config | `drizzle.config.ts` (`schema: "./src/schema/*.ts"`) |
 | Kit env | `.env` (from `.env.example`) |
 
@@ -39,6 +39,14 @@ pnpm db:check
 - Create a process-wide singleton `db` at import time (apps call `createDb`)
 - Depend on Hono, tRPC, or React
 - Be imported by `apps/web` (or any browser bundle)
+
+## Template migration policy
+
+- `todos` is disposable demo code, so this template intentionally keeps `drizzle/` empty except for `.gitkeep`
+- While evaluating the template, use `db:push`; do not generate or commit a Todo migration
+- After replacing Todo with real domains, stabilize the real schema and generate that project's first migration
+- From the first real migration onward, commit `drizzle/**` and use `db:migrate` in shared, CI, and production environments
+- Tests use isolated temporary SQLite plus schema `push`; they must never write generated artifacts into `drizzle/`
 
 ### Consumers
 
@@ -72,7 +80,7 @@ packages/db/
 ├── .env.example              # DB_FILE_NAME=file:local.db
 ├── .env                      # gitignored
 ├── local.db                  # gitignored local SQLite file
-├── drizzle/                  # migrations — commit
+├── drizzle/                  # .gitkeep in template; real project migrations later
 └── src/
     ├── client.ts             # createDb + Database type
     └── schema/
@@ -87,7 +95,8 @@ When you start a real product:
 
 1. Add **your** domain files under `src/schema/` (e.g. `users.ts`, `orders.ts`).
 2. Remove `todos.ts` and any app code that imports `@workspace/db/schema/todos` once you no longer need the demo.
-3. Sync DB: `pnpm db:push` while iterating; `pnpm db:generate` when stable (and drop obsolete todo migrations if you reset history for a greenfield app).
+3. Sync the demo with `pnpm db:push`; do not generate migrations yet.
+4. After Todo is removed and the real schema is stable, run `pnpm db:generate` to create the project's first migration.
 
 **Do not** treat `todos` as a required or permanent part of the schema. Build your own tables; replace the demo.
 
@@ -147,7 +156,16 @@ Do not copy column lists into other packages.
 | `db:studio` | Drizzle Studio |
 | `db:check` | Validate migrations vs schema |
 | `db:pull` | Introspect DB → schema (rare; legacy DBs) |
+| `test` | Run DB tests once; passes with the intentionally empty scaffold |
+| `test:watch` | Watch DB tests during product development |
 | `typecheck` | `tsc --noEmit` |
+
+## Testing
+
+- Use a unique temporary SQLite file per suite and initialize it from the current Drizzle schema without generating migrations
+- Close the client and delete `.db`, `-wal`, and `-shm` files in cleanup, including failure paths
+- Do not use the developer's `.env`, `local.db`, or remote database
+- Test real constraints, indexes, transactions, and client lifecycle when a product adds them
 
 ## Workflows
 
@@ -171,8 +189,11 @@ pnpm db:check
 
 ```bash
 pnpm install
-# optional: cp packages/db/.env.example packages/db/.env  (only if not using default file:local.db)
-pnpm db:migrate    # apply committed migrations — not push
+# template demo only (no committed migration):
+pnpm db:push
+
+# real project after its first migration exists:
+pnpm db:migrate
 ```
 
 ## Env
@@ -198,7 +219,8 @@ pnpm db:migrate    # apply committed migrations — not push
 
 - [ ] Table file under `src/schema/<name>.ts`
 - [ ] Local iteration used `pnpm db:push` while the shape was still moving
-- [ ] Once stable: `pnpm db:generate` and **commit** new files under `drizzle/`
+- [ ] Disposable Todo did not generate a migration
+- [ ] Once the real schema is stable: `pnpm db:generate` and **commit** new files under `drizzle/`
 - [ ] `pnpm db:migrate` / `pnpm db:check` pass
-- [ ] Quality gates pass: `pnpm typecheck` and `pnpm check` (run `pnpm fix` if format/lint is auto-fixable)
+- [ ] Quality gates pass: package tests, `pnpm typecheck`, and `pnpm check` (run `pnpm fix` if format/lint is auto-fixable)
 - [ ] App env still points at the correct DB URL
