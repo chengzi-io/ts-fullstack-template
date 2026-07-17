@@ -20,4 +20,13 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  // Dev: browser calls same-origin /trpc/* → apps/server (default :3000)
+  server: {
+    proxy: {
+      "/trpc": {
+        changeOrigin: true,
+        target: "http://localhost:3000",
+      },
+    },
+  },
 });
