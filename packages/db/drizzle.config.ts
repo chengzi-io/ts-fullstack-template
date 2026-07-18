@@ -1,19 +1,19 @@
 import { defineConfig } from "drizzle-kit";
 
 /**
- * Kit runs with cwd = packages/db.
- * Load connection via scripts: `node --env-file-if-exists=.env …` (this package's
- * `.env` only — never apps/server). Override with shell/CI DATABASE_*.
- * Unset DATABASE_URL → file:local.db under this package cwd.
- *
- * dialect "turso" covers both local `file:…` SQLite and remote libsql:// Turso.
+ * Kit requires DATABASE_URL in process.env (via `.env` or CI).
+ * Scripts: `node --env-file-if-exists=.env …` — copy `.env.example` first if needed.
  */
-const databaseUrl = process.env.DATABASE_URL?.trim() || "file:local.db";
-const databaseAuthToken = process.env.DATABASE_AUTH_TOKEN?.trim() || undefined;
+const databaseUrl = process.env.DATABASE_URL?.trim();
+if (!databaseUrl) {
+  throw new Error(
+    "Missing DATABASE_URL. Copy packages/db/.env.example → .env or export DATABASE_URL."
+  );
+}
 
 export default defineConfig({
   dbCredentials: {
-    authToken: databaseAuthToken,
+    authToken: process.env.DATABASE_AUTH_TOKEN?.trim() || undefined,
     url: databaseUrl,
   },
   dialect: "turso",
