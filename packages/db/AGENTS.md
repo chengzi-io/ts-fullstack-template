@@ -30,7 +30,7 @@ pnpm db:check
 ### This package may
 
 - Define Drizzle tables and inferred types (`$inferSelect` / `$inferInsert`)
-- Export `createDb()` and `Database`; returned databases expose idempotent `close()`
+- Export `createDb()` and `Database`; returned databases expose `ping()` (readiness) and idempotent `close()`
 - Own package-local `.env` / `.env.example` for **`DATABASE_*` only** (no dotenv in code)
 - Read only `DATABASE_URL` / `DATABASE_AUTH_TOKEN` from `process.env` at runtime
 - Run drizzle-kit via scripts that inject this package's `.env`
@@ -56,7 +56,7 @@ pnpm db:check
 
 | Consumer | How |
 |----------|-----|
-| `apps/server` | Validate/load env first, call `createDb()`, close during shutdown |
+| `apps/server` | Validate/load env first, call `createDb()`, use `db.ping()` for `/readyz`, close during shutdown |
 | `packages/trpc` | Receive the host-created `Database` through context; import tables/types from `@workspace/db` |
 | `apps/web` | **Never** — use tRPC / API types only |
 
@@ -67,8 +67,11 @@ import { postsTable, type Post } from "@workspace/db/schema/posts";
 // Host must populate process.env.DATABASE_URL (+ optional DATABASE_AUTH_TOKEN) first
 const db = createDb();
 
+await db.ping(); // readiness / connectivity — hosts must not import drizzle-orm for this
 db.close(); // process shutdown; safe to call more than once
 ```
+
+**Hosts (`apps/server`) must not import `drizzle-orm`.** Connectivity and lifecycle stay on `Database` (`ping` / `close`). Application query code in `packages/trpc` may import drizzle helpers while services write SQL-shaped queries.
 
 `src/index.ts` is the package entry (implementation, not a re-export barrel). Schema stays one file per domain — no `src/schema/index.ts`. Public surface is **package.json `exports`** only:
 
@@ -90,7 +93,7 @@ packages/db/
 ├── local.db                  # gitignored local SQLite (when using file:local.db)
 ├── drizzle/                  # .gitkeep in template; real project migrations later
 └── src/
-    ├── index.ts              # createDb() + Database type + close lifecycle
+    ├── index.ts              # createDb() + Database type + ping/close lifecycle
     └── schema/
         └── <your-domain>.ts  # one file per domain (see scaffold note below)
 ```

@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 /** Reads `DATABASE_URL` and optional `DATABASE_AUTH_TOKEN` from process.env. */
@@ -21,6 +22,10 @@ export function createDb() {
       if (!client.closed) {
         client.close();
       }
+    },
+    /** Connectivity check for readiness probes. Throws if the DB is unreachable. */
+    async ping(): Promise<void> {
+      await database.run(sql`SELECT 1`);
     },
   });
 }
