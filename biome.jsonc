@@ -27,8 +27,7 @@
       "!**/graphql-env.d.ts",
       "!**/graphql-env.ts",
       "!**/prisma/generated",
-      "!**/drizzle/meta",
-      "!**/src/migrations/meta"
+      "!**/drizzle/meta"
     ]
   },
   // Drizzle table columns follow domain order (id → fields → timestamps),

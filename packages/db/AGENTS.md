@@ -2,18 +2,18 @@
 
 Data-layer package for the monorepo. **Owns** Drizzle schema, migrations, and the DB client factory.
 
-Other packages consume this; they do **not** redefine tables or own `drizzle/` migrations.
+Other packages consume this; they do **not** redefine tables or own `drizzle/` SQL.
 
 ## Ownership
 
 | Concern | Location |
 |---------|----------|
 | Table definitions | `src/schema/<name>.ts` (one domain per file) |
-| Client factory | `src/client.ts` → `createDb(url)` (`@workspace/db`) |
-| Schema import path | `@workspace/db/schema/<name>` (no barrel `index.ts`) |
+| Client factory | `src/index.ts` → `createDb()` (`@workspace/db`, reads `DATABASE_*` from process.env) |
+| Schema import path | `@workspace/db/schema/<name>` (no schema barrel) |
 | Migrations (real project only) | `drizzle/**` |
-| Kit config | `drizzle.config.ts` (`schema: "./src/schema/*.ts"`) |
-| Kit env | `.env` (from `.env.example`) |
+| Kit config | `drizzle.config.ts` (`schema: "./src/schema/*.ts"`, `out: "./drizzle"`, `dialect: "turso"`) |
+| DB connection env | `.env` (from `.env.example`) — **only** `DATABASE_URL` / `DATABASE_AUTH_TOKEN`; loaded via Node `--env-file-if-exists=.env` |
 
 **Do not** put schema or `db:*` scripts in `apps/api` or monorepo root as a second source of truth. Root only proxies:
 
@@ -30,13 +30,17 @@ pnpm db:check
 ### This package may
 
 - Define Drizzle tables and inferred types (`$inferSelect` / `$inferInsert`)
-- Export `createDb(url)` and `Database`
-- Run drizzle-kit against `DB_FILE_NAME`
+- Export `createDb()` and `Database`; returned databases expose idempotent `close()`
+- Own package-local `.env` / `.env.example` for **`DATABASE_*` only** (no dotenv in code)
+- Read only `DATABASE_URL` / `DATABASE_AUTH_TOKEN` from `process.env` at runtime
+- Run drizzle-kit via scripts that inject this package's `.env`
+- Store semantic string enums (`L`/`M`/`H`) as persistence-owned constants. Keep them aligned with wire values deliberately, without importing `@workspace/trpc`.
 
 ### This package must not
 
-- Read app env (`PORT`, `CORS_ORIGIN`, auth secrets)
-- Create a process-wide singleton `db` at import time (apps call `createDb`)
+- Use the `dotenv` package or load app env (`PORT`, `CORS_ORIGIN`, secrets unrelated to DB)
+- Put non-DB variables in this package's `.env`
+- Create a process-wide singleton `db` at import time (apps call `createDb()`)
 - Depend on Hono, tRPC, or React
 - Be imported by `apps/web` (or any browser bundle)
 
@@ -52,21 +56,25 @@ pnpm db:check
 
 | Consumer | How |
 |----------|-----|
-| `apps/api` (or future `packages/api`) | `createDb(env.databaseUrl)` at boot; import tables/types from `@workspace/db` |
+| `apps/server` | Validate/load env first, call `createDb()`, close during shutdown |
+| `packages/trpc` | Receive the host-created `Database` through context; import tables/types from `@workspace/db` |
 | `apps/web` | **Never** — use tRPC / API types only |
 
 ```ts
 import { createDb } from "@workspace/db";
 import { postsTable, type Post } from "@workspace/db/schema/posts";
 
-const db = createDb(process.env.DB_FILE_NAME!); // prefer validated env in the app
+// Host must populate process.env.DATABASE_URL (+ optional DATABASE_AUTH_TOKEN) first
+const db = createDb();
+
+db.close(); // process shutdown; safe to call more than once
 ```
 
-Ultracite forbids barrel `index.ts` re-exports. Public surface is **package.json `exports`** only:
+`src/index.ts` is the package entry (implementation, not a re-export barrel). Schema stays one file per domain — no `src/schema/index.ts`. Public surface is **package.json `exports`** only:
 
 | Import | File |
 |--------|------|
-| `@workspace/db` | `src/client.ts` |
+| `@workspace/db` | `src/index.ts` |
 | `@workspace/db/schema/<name>` | `src/schema/<name>.ts` |
 
 ## Layout
@@ -77,12 +85,12 @@ packages/db/
 ├── package.json              # name: @workspace/db
 ├── tsconfig.json
 ├── drizzle.config.ts
-├── .env.example              # DB_FILE_NAME=file:local.db
-├── .env                      # gitignored
-├── local.db                  # gitignored local SQLite file
+├── .env.example              # DATABASE_URL / DATABASE_AUTH_TOKEN only
+├── .env                      # gitignored; copy from .env.example
+├── local.db                  # gitignored local SQLite (when using file:local.db)
 ├── drizzle/                  # .gitkeep in template; real project migrations later
 └── src/
-    ├── client.ts             # createDb + Database type
+    ├── index.ts              # createDb() + Database type + close lifecycle
     └── schema/
         └── <your-domain>.ts  # one file per domain (see scaffold note below)
 ```
@@ -108,6 +116,12 @@ Prefer **one domain table (or tightly related set) per file**. Name files after 
 
 Add `src/schema/<name>.ts` with `sqliteTable(...)` (or the dialect in use).  
 No barrel updates — `exports["./schema/*"]` already maps new files.
+
+Column order is **domain order**, not alphabetical (Biome `useSortedKeys` is off for this folder):
+
+1. `id` (and other keys)
+2. table-specific fields
+3. shared timestamps / audit fields (`createdAt`, `updatedAt`, …)
 
 ### 2. While iterating (local / unstable shape) → `push`
 
@@ -141,7 +155,7 @@ Do not copy column lists into other packages.
 ### Rule of thumb
 
 | Phase | Command | Commits `drizzle/`? |
-|-------|---------|---------------------|
+|-------|---------|----------------------------|
 | Exploring / renaming columns often | `pnpm db:push` | No |
 | Shape settled, ready to share | `pnpm db:generate` → commit → `pnpm db:migrate` | Yes |
 | Fresh clone / CI / prod | `pnpm db:migrate` only | (apply existing) |
@@ -163,8 +177,8 @@ Do not copy column lists into other packages.
 ## Testing
 
 - Use a unique temporary SQLite file per suite and initialize it from the current Drizzle schema without generating migrations
-- Close the client and delete `.db`, `-wal`, and `-shm` files in cleanup, including failure paths
-- Do not use the developer's `.env`, `local.db`, or remote database
+- Close the client idempotently and delete `.db`, `-wal`, and `-shm` files in cleanup, including failure paths
+- Do not use the developer's app `.env`, `local.db`, or remote database
 - Test real constraints, indexes, transactions, and client lifecycle when a product adds them
 
 ## Workflows
@@ -198,22 +212,33 @@ pnpm db:migrate
 
 ## Env
 
-- This package does **not** use `dotenv`. `createDb(url)` never reads `process.env`.
-- Kit: drizzle-kit loads `packages/db/.env` from cwd when present. `DB_FILE_NAME` overrides the default `file:local.db` (relative to **this package cwd**).
-- Runtime apps (later): their own env must point at the **same** DB URL when using local SQLite.
-- Never commit `.env` or `*.db`.
+- This package **owns** `DATABASE_*` via `.env` / `.env.example` but does **not** use the `dotenv` package.
+- `createDb()` reads `process.env` only (never logs credentials):
+  - `DATABASE_URL` — required at call time; local `file:…` or remote `libsql://…`
+  - `DATABASE_AUTH_TOKEN` — optional; required for remote Turso, omit for local files
+- Kit scripts: `node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs …`
+  - Unset `DATABASE_URL` → default `file:local.db` (this package cwd → `packages/db/local.db`)
+- Hosts (e.g. `apps/server`) must load this package's `.env` (or platform env), then validate with t3-env; they do **not** re-declare `DATABASE_*` in their own `.env`.
+- Override without a file, e.g.:
+
+  ```bash
+  cp .env.example .env   # once, from packages/db
+  DATABASE_URL=libsql://….turso.io DATABASE_AUTH_TOKEN=… pnpm db:push
+  ```
+
+- Never commit secrets or `*.db`.
 
 ## Types
 
-- Prefer Drizzle inferred types: `typeof table.$inferSelect` / `$inferInsert`.
-- Export domain aliases next to the table (e.g. `Post`, `NewPost`) when they help call sites.
-- API input validation (Zod) lives with tRPC / app layers — **not** duplicated as a second schema source of truth here unless you intentionally add `drizzle-zod` later in one place.
+- Prefer Drizzle inferred types at the **call site**: `typeof table.$inferSelect` / `$inferInsert` (e.g. in services). Do **not** export `Todo` / `NewTodo`-style aliases from schema files by default — they become a second public surface next to the table.
+- Wire / API shapes live in tRPC Zod (`todoOutput`, inputs). Clients use `RouterOutputs` / `RouterInputs`, not db row types.
+- Do not reverse-depend: services should not type rows as `z.output<typeof todoOutput>`; router `.output(...)` is the wire boundary.
 
 ## Imports
 
 - External only via package exports: `@workspace/db`, `@workspace/db/schema/<name>`.
 - Do not deep-import `packages/db/src/...` from other packages.
-- Do not add `src/index.ts` / `src/schema/index.ts` barrels (Ultracite `noBarrelFile`).
+- Do not add `src/schema/index.ts` barrels (Ultracite `noBarrelFile`). `src/index.ts` is the package entry implementation, not a re-export barrel.
 
 ## Checklist before finishing a schema change
 
