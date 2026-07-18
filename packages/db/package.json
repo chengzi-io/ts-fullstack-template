@@ -7,15 +7,15 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --passWithNoTests",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "db:check": "drizzle-kit check",
-    "db:pull": "drizzle-kit pull"
+    "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:push": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs push",
+    "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio",
+    "db:check": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs check",
+    "db:pull": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs pull"
   },
   "exports": {
-    ".": "./src/client.ts",
+    ".": "./src/index.ts",
     "./schema/*": "./src/schema/*.ts"
   },
   "dependencies": {
@@ -23,7 +23,7 @@
     "drizzle-orm": "1.0.0-rc.4"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^22.20.1",
     "drizzle-kit": "1.0.0-rc.4",
     "typescript": "~6"
   }

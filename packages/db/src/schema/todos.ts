@@ -19,6 +19,3 @@ export const todosTable = sqliteTable("todos", {
     .$defaultFn(() => new Date())
     .$onUpdateFn(() => new Date()),
 });
-
-export type Todo = typeof todosTable.$inferSelect;
-export type NewTodo = typeof todosTable.$inferInsert;
