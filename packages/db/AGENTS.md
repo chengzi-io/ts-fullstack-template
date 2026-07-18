@@ -217,12 +217,12 @@ pnpm db:migrate
   - `DATABASE_URL` — required at call time; local `file:…` or remote `libsql://…`
   - `DATABASE_AUTH_TOKEN` — optional; required for remote Turso, omit for local files
 - Kit scripts: `node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs …`
-  - Unset `DATABASE_URL` → default `file:local.db` (this package cwd → `packages/db/local.db`)
-- Hosts (e.g. `apps/server`) must load this package's `.env` (or platform env), then validate with t3-env; they do **not** re-declare `DATABASE_*` in their own `.env`.
-- Override without a file, e.g.:
+  - **`DATABASE_URL` is required** (no default). Missing → config throws. Copy `.env.example` → `.env` or export in CI.
+- Hosts (e.g. `apps/server`) load this package's `.env` (or platform env), then validate with t3-env; they do **not** re-declare `DATABASE_*` in their own `.env`.
+- Examples:
 
   ```bash
-  cp .env.example .env   # once, from packages/db
+  cp .env.example .env   # once, from packages/db (includes DATABASE_URL=file:local.db)
   DATABASE_URL=libsql://….turso.io DATABASE_AUTH_TOKEN=… pnpm db:push
   ```
 
