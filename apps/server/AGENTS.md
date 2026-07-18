@@ -5,7 +5,8 @@ Thin HTTP host. Do **not** put domain routers or Drizzle schema here.
 - Mount tRPC from `@workspace/api`
 - Inject `db`, `requestId`, `log` via `createContext`
 - Process wiring stays in `src/index.ts`; inject `db`, `corsOrigin`, and `log` into `createApp`
-- Probes: **`GET /healthz`** (alive), **`GET /readyz`** (DB OK); **no `/health`**
+- Probes: **`GET /healthz`** (alive), **`GET /readyz`** (DB OK via `db.ping()`); **no `/health`**
+- Do **not** import `drizzle-orm` in this app; readiness uses `@workspace/db` lifecycle (`ping` / `close`)
 - Non-RPC adapters (webhooks, etc.) stay here
 - Graceful shutdown: `SIGINT` / `SIGTERM` → `server.close()` (see `src/index.ts`)
 - `DB_FILE_NAME` is optional locally (defaults to packages/db SQLite file)

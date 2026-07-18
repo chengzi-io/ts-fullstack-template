@@ -32,7 +32,7 @@ Runtime still needs a DB URL under the hood (`createDb`); you just don't have to
 | Path | Role |
 |------|------|
 | `GET /healthz` | Liveness (process up) |
-| `GET /readyz` | Readiness (DB reachable; **503** if not) |
+| `GET /readyz` | Readiness (`db.ping()`; **503** if DB unreachable) |
 | `/trpc/*` | tRPC (`appRouter` from `@workspace/api`) |
 | `GET /` | Simple ok text |
 

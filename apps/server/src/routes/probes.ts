@@ -1,12 +1,7 @@
 import type { Database } from "@workspace/db";
-import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 
-/**
- * Kubernetes-style probes
- * - GET /healthz  — process up
- * - GET /readyz — dependencies OK (DB)
- */
+/** GET /healthz (liveness), GET /readyz (DB). */
 export function createProbeRoutes(db: Database) {
   const probes = new Hono();
 
@@ -14,7 +9,7 @@ export function createProbeRoutes(db: Database) {
 
   probes.get("/readyz", async (c) => {
     try {
-      await db.run(sql`SELECT 1`);
+      await db.ping();
       return c.json({ status: "ready", t: Date.now() });
     } catch {
       return c.json({ status: "not_ready", t: Date.now() }, 503);
