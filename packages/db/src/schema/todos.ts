@@ -1,18 +1,19 @@
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const todosTable = sqliteTable("todos", {
+  id: int().primaryKey({ autoIncrement: true }),
+
+  title: text().notNull(),
+  description: text(),
   completed: int({ mode: "boolean" }).notNull().default(false),
+  priority: text({ enum: ["L", "M", "H"] })
+    .notNull()
+    .default("M"),
+  dueAt: int({ mode: "timestamp_ms" }),
 
   createdAt: int({ mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
-  description: text(),
-  dueAt: int({ mode: "timestamp_ms" }),
-  id: int().primaryKey({ autoIncrement: true }),
-  /** 0 = low, 1 = medium, 2 = high */
-  priority: int().notNull().default(1),
-
-  title: text().notNull(),
   updatedAt: int({ mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date())
