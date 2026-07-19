@@ -9,18 +9,17 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "exports": {
-    ".": "./src/root.ts",
+    ".": "./src/index.ts",
     "./context": "./src/context.ts"
   },
   "dependencies": {
     "@trpc/server": "^11.18.0",
-    "@workspace/db": "workspace:*",
-    "drizzle-orm": "1.0.0-rc.4",
+    "@workspace/domain": "workspace:*",
     "superjson": "^2.2.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^22.20.1",
     "typescript": "~6"
   }
 }
