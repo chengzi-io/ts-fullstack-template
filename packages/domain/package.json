@@ -1,0 +1,23 @@
+{
+  "name": "@workspace/domain",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./authors": "./src/authors.ts",
+    "./pagination": "./src/pagination.ts",
+    "./posts": "./src/posts.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "~6"
+  }
+}
