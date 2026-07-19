@@ -2,18 +2,17 @@ import { createClient } from "@libsql/client";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
-/** Reads `DATABASE_URL` and optional `DATABASE_AUTH_TOKEN` from process.env. */
-export function createDb() {
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) {
-    throw new Error(
-      "Missing DATABASE_URL. Set a local file: URL or remote libsql:// Turso URL."
-    );
-  }
+export interface DatabaseConfig {
+  authToken?: string;
+  /** e.g. `file:local.db`, `libsql://…` */
+  url: string;
+}
 
+/** Hosts pass validated config — does not read `process.env`. */
+export function createDb(config: DatabaseConfig) {
   const client = createClient({
-    authToken: process.env.DATABASE_AUTH_TOKEN?.trim() || undefined,
-    url,
+    authToken: config.authToken?.trim(),
+    url: config.url.trim(),
   });
   const database = drizzle({ client });
 
@@ -23,7 +22,7 @@ export function createDb() {
         client.close();
       }
     },
-    /** Connectivity check for readiness probes. Throws if the DB is unreachable. */
+    /** Readiness probe. Throws if unreachable. */
     async ping(): Promise<void> {
       await database.run(sql`SELECT 1`);
     },
