@@ -1,33 +1,36 @@
-import type { Database } from "@workspace/db";
+import type { AppRepos } from "@workspace/domain";
 
-/**
- * Minimal logger surface for procedures (structural — host injects pino, etc.).
- * Avoid depending on a concrete logger package from `@workspace/api`.
- */
-export interface AppLogger {
+/** Host injects logger (e.g. pino); no pino dependency here. */
+export interface Logger {
   debug: (obj: object, msg?: string) => void;
   error: (obj: object, msg?: string) => void;
   info: (obj: object, msg?: string) => void;
   warn: (obj: object, msg?: string) => void;
 }
 
-/** Request-scoped dependencies injected by the HTTP host (`apps/server`). */
-export interface Context {
-  db: Database;
-  log: AppLogger;
-  requestId: string;
-}
-
-export interface CreateContextOptions {
-  db: Database;
-  log: AppLogger;
-  requestId: string;
-}
-
-export function createContext(opts: CreateContextOptions): Context {
-  return {
-    db: opts.db,
-    log: opts.log,
-    requestId: opts.requestId,
+/** Filled by host when auth exists; template leaves unset. */
+export interface Session {
+  user: {
+    id: string;
   };
 }
+
+/**
+ * Inject deps only — no env, no raw `db`.
+ * Data access is `repos` (`AppRepos`).
+ */
+export function createTRPCContext(opts: {
+  log: Logger;
+  repos: AppRepos;
+  requestId: string;
+  session?: Session | null;
+}) {
+  return {
+    log: opts.log,
+    repos: opts.repos,
+    requestId: opts.requestId,
+    session: opts.session ?? null,
+  };
+}
+
+export type Context = ReturnType<typeof createTRPCContext>;
