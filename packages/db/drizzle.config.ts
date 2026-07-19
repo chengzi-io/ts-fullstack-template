@@ -1,9 +1,6 @@
 import { defineConfig } from "drizzle-kit";
 
-/**
- * Kit requires DATABASE_URL in process.env (via `.env` or CI).
- * Scripts: `node --env-file-if-exists=.env …` — copy `.env.example` first if needed.
- */
+// Kit only: scripts use `--env-file-if-exists=.env` (not createDb).
 const databaseUrl = process.env.DATABASE_URL?.trim();
 if (!databaseUrl) {
   throw new Error(

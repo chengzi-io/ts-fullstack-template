@@ -1,15 +1,16 @@
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const todosTable = sqliteTable("todos", {
+import { authorsTable } from "./authors.js";
+
+/** Demo — delete with authors. FK restrict: author with posts cannot be deleted. */
+export const postsTable = sqliteTable("posts", {
   id: int().primaryKey({ autoIncrement: true }),
 
-  title: text().notNull(),
-  description: text(),
-  completed: int({ mode: "boolean" }).notNull().default(false),
-  priority: text({ enum: ["L", "M", "H"] })
+  authorId: int()
     .notNull()
-    .default("M"),
-  dueAt: int({ mode: "timestamp_ms" }),
+    .references(() => authorsTable.id, { onDelete: "restrict" }),
+  title: text().notNull(),
+  body: text(),
 
   createdAt: int({ mode: "timestamp_ms" })
     .notNull()
