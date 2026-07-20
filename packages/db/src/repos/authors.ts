@@ -1,4 +1,8 @@
-import type { AuthorsRepo, CreateAuthorInput } from "@workspace/domain/authors";
+import type {
+  AuthorsRepo,
+  CreateAuthorInput,
+  UpdateAuthorPatch,
+} from "@workspace/domain/authors";
 import {
   paginationOffset,
   toPaginatedResult,
@@ -7,6 +11,7 @@ import { desc, eq } from "drizzle-orm";
 
 import type { Database } from "../index.js";
 import { authorsTable } from "../schema/authors.js";
+import { postsTable } from "../schema/posts.js";
 
 type NewAuthor = typeof authorsTable.$inferInsert;
 
@@ -34,6 +39,30 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
       return author;
     },
 
+    async delete(id) {
+      const existing = await db
+        .select({ id: authorsTable.id })
+        .from(authorsTable)
+        .where(eq(authorsTable.id, id))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      if (!existing) {
+        return "not_found";
+      }
+
+      const postCount = await db.$count(
+        postsTable,
+        eq(postsTable.authorId, id)
+      );
+      if (postCount > 0) {
+        return "has_posts";
+      }
+
+      await db.delete(authorsTable).where(eq(authorsTable.id, id));
+      return "deleted";
+    },
+
     async list(query) {
       const { page, pageSize } = query;
 
@@ -49,6 +78,21 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
 
       return toPaginatedResult(items, total, page, pageSize);
     },
+
+    async update(id, patch) {
+      const values = toUpdateValues(patch);
+      if (Object.keys(values).length === 0) {
+        return this.byId(id);
+      }
+
+      const [author] = await db
+        .update(authorsTable)
+        .set(values)
+        .where(eq(authorsTable.id, id))
+        .returning();
+
+      return author ?? null;
+    },
   };
 }
 
@@ -56,4 +100,10 @@ function toInsertValues(input: CreateAuthorInput): NewAuthor {
   return {
     name: input.name,
   };
+}
+
+function toUpdateValues(patch: UpdateAuthorPatch): Partial<NewAuthor> {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined)
+  ) as Partial<NewAuthor>;
 }

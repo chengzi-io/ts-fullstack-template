@@ -14,6 +14,8 @@ export type {
   CreateAuthorInput,
   ListAuthorsInput,
   ListAuthorsResult,
+  UpdateAuthorInput,
+  UpdateAuthorPatch,
 } from "./authors.js";
 
 export type {
@@ -22,4 +24,6 @@ export type {
   ListPostsResult,
   Post,
   PostsRepo,
+  UpdatePostInput,
+  UpdatePostPatch,
 } from "./posts.js";

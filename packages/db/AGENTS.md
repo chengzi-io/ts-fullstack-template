@@ -18,6 +18,7 @@ Workspace map: root `AGENTS.md`. Contracts (`*Repo`, Zod): `@workspace/domain`.
 
 - **Do** implement `@workspace/domain` `*Repo`; method names match tRPC
 - **Do** pass config into `createDb({ url, authToken? })` from the host
+- Relative `file:` paths use **process.cwd()**; template `.env` uses `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share monorepo-root `local.db`
 - **Do not** read `process.env` in runtime client code (kit may; `createDb` must not)
 - **Do not** depend on `@workspace/api`, Hono, React
 - **Do not** let `apps/web` import this package

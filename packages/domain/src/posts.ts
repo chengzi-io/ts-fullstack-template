@@ -27,6 +27,19 @@ export const createPostInput = postSchema
     title: z.string().trim().min(1, "title is required").max(200),
   });
 
+export const updatePostInput = createPostInput
+  .partial()
+  .extend({
+    id: postIdSchema,
+  })
+  .refine(
+    (data) =>
+      Object.entries(data).some(
+        ([key, value]) => key !== "id" && value !== undefined
+      ),
+    { message: "No fields to update" }
+  );
+
 export const listPostsInput = paginationInput
   .extend({
     authorId: authorIdSchema.optional(),
@@ -45,12 +58,16 @@ export const deletePostOutput = z.object({
 
 export type Post = z.output<typeof postSchema>;
 export type CreatePostInput = z.output<typeof createPostInput>;
+export type UpdatePostInput = z.output<typeof updatePostInput>;
+export type UpdatePostPatch = Omit<UpdatePostInput, "id">;
 export type ListPostsInput = z.output<typeof listPostsInput>;
 export type ListPostsResult = z.output<typeof listPostsOutput>;
 
+/** Aligns with tRPC `posts.*`. */
 export interface PostsRepo {
   byId: (id: number) => Promise<Post | null>;
   create: (input: CreatePostInput) => Promise<Post | null>;
   delete: (id: number) => Promise<boolean>;
   list: (query: ListPostsInput) => Promise<ListPostsResult>;
+  update: (id: number, patch: UpdatePostPatch) => Promise<Post | null>;
 }
