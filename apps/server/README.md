@@ -1,57 +1,45 @@
 # server
 
-HTTP host for the monorepo: **Hono** + **tRPC** mount.
+HTTP host: **Hono** + tRPC mount. See `AGENTS.md` for agent-oriented boundaries.
 
 | Concern | Package |
 |---------|---------|
-| Process / env / CORS / health | **this app** |
-| Routers / Zod / services | `@workspace/api` |
-| Schema / migrations / `createDb` | `@workspace/db` |
+| Process / env / CORS / probes | **this app** |
+| Routers / context | `@workspace/api` |
+| Domain Zod / repo ports | `@workspace/domain` |
+| Schema / `createDb` / repos | `@workspace/db` |
 
 ## Setup
 
 ```bash
-# from monorepo root
 pnpm install
-pnpm db:push    # or db:migrate when migrations exist
+cp packages/db/.env.example packages/db/.env   # DATABASE_URL=file:../../local.db
+pnpm db:push
 pnpm --filter server dev
 ```
 
-`apps/server/.env` is **optional** for local defaults:
+| File | Owns |
+|------|------|
+| `packages/db/.env` | `DATABASE_URL`, optional `DATABASE_AUTH_TOKEN` |
+| `apps/server/.env` | `PORT`, `CORS_ORIGIN`, `LOG_LEVEL`, timeouts — **not** `DATABASE_*` |
 
-| Var | Default | When to set |
-|-----|---------|-------------|
-| `DB_FILE_NAME` | `file:../../packages/db/local.db` | Remote libsql / custom path |
-| `PORT` | `3000` | Different listen port |
-| `CORS_ORIGIN` | (none) | Browser client on another origin |
-
-Runtime still needs a DB URL under the hood (`createDb`); you just don't have to put `DB_FILE_NAME` in `.env` if the monorepo default is fine. Kit (`pnpm db:*`) uses `packages/db` cwd / its own default — keep both pointing at the same database file when developing locally.
+Load order: `packages/db/.env` then `apps/server/.env` (platform env wins if set).
 
 ## Endpoints
 
 | Path | Role |
 |------|------|
-| `GET /healthz` | Liveness (process up) |
-| `GET /readyz` | Readiness (`db.ping()`; **503** if DB unreachable) |
-| `/trpc/*` | tRPC (`appRouter` from `@workspace/api`) |
-| `GET /` | Simple ok text |
-
-Demo procedures (disposable): `todos.list`, `todos.byId`, `todos.create`, `todos.update`, `todos.delete`.
-
-## Middleware / observability
-
-| Layer | Behavior |
-|-------|----------|
-| `requestId` | Correlate logs and error JSON |
-| pino access log | method / path / status / durationMs |
-| `secureHeaders` | Baseline security headers |
-| `bodyLimit` | 1 MiB default |
-| `cors` | Only when `CORS_ORIGIN` is set (`/trpc/*`) |
-| `notFound` / `onError` | JSON `{ error, requestId }` |
-
-tRPC context receives `{ db, requestId, log }` from the host.
-`index.ts` owns process-level wiring and injects `db`, `corsOrigin`, and `log` into `createApp`.
+| `GET /healthz` | Liveness |
+| `GET /readyz` | Readiness (`db.ping()`) |
+| `/trpc/*` | tRPC (`authors.*`, `posts.*` demo) |
+| `GET /` | ok text |
 
 ## Scripts
 
-`dev` / `build` / `start` / `typecheck`. Database kit: root `pnpm db:*` → `@workspace/db`.
+| Script | Meaning |
+|--------|---------|
+| `dev` | tsx watch |
+| `build` | tsup → `dist/index.js` |
+| `start` | run production bundle |
+| `test` | vitest + build smoke `/healthz` |
+| `typecheck` | tsc |

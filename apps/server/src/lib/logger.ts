@@ -7,9 +7,6 @@ export interface CreateLoggerOptions {
   nodeEnv: string;
 }
 
-/**
- * Root process logger. Dev uses pino-pretty; prod emits JSON to stdout.
- */
 export function createLogger(options: CreateLoggerOptions) {
   const isDev = options.nodeEnv === "development";
 
