@@ -1,7 +1,7 @@
 import type { Database } from "@workspace/db";
 import { Hono } from "hono";
 
-/** GET /healthz (liveness), GET /readyz (DB). */
+/** Liveness `/healthz`, readiness `/readyz` (uses `db.ping()`). */
 export function createProbeRoutes(db: Database) {
   const probes = new Hono();
 

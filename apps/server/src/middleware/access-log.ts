@@ -6,10 +6,6 @@ export interface AccessLogVariables {
   log: Logger;
 }
 
-/**
- * Structured access log after the handler (method/path/status/durationMs).
- * Requires `log` on context (set after requestId → child logger).
- */
 export const accessLog = createMiddleware<{
   Variables: AccessLogVariables;
 }>(async (c, next) => {
@@ -17,7 +13,6 @@ export const accessLog = createMiddleware<{
   await next();
 
   const { method, path } = c.req;
-  // Probes should not flood info-level access logs.
   if (path === "/healthz" || path === "/readyz") {
     return;
   }
