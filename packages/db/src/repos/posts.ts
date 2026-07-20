@@ -2,7 +2,12 @@ import {
   paginationOffset,
   toPaginatedResult,
 } from "@workspace/domain/pagination";
-import type { CreatePostInput, Post, PostsRepo } from "@workspace/domain/posts";
+import type {
+  CreatePostInput,
+  Post,
+  PostsRepo,
+  UpdatePostPatch,
+} from "@workspace/domain/posts";
 import { desc, eq } from "drizzle-orm";
 
 import type { Database } from "../index.js";
@@ -44,14 +49,7 @@ export function createPostsRepo(db: Database): PostsRepo {
     },
 
     async create(input) {
-      const author = await db
-        .select({ id: authorsTable.id, name: authorsTable.name })
-        .from(authorsTable)
-        .where(eq(authorsTable.id, input.authorId))
-        .limit(1)
-        .then((rows) => rows[0]);
-
-      // null → router BAD_REQUEST (unknown authorId)
+      const author = await loadAuthor(db, input.authorId);
       if (!author) {
         return null;
       }
@@ -103,7 +101,42 @@ export function createPostsRepo(db: Database): PostsRepo {
 
       return toPaginatedResult(rows.map(toPost), total, page, pageSize);
     },
+
+    async update(id, patch) {
+      if (patch.authorId !== undefined) {
+        const author = await loadAuthor(db, patch.authorId);
+        if (!author) {
+          return null;
+        }
+      }
+
+      const values = toUpdateValues(patch);
+      if (Object.keys(values).length === 0) {
+        return this.byId(id);
+      }
+
+      const [updated] = await db
+        .update(postsTable)
+        .set(values)
+        .where(eq(postsTable.id, id))
+        .returning({ id: postsTable.id });
+
+      if (!updated) {
+        return null;
+      }
+
+      return this.byId(id);
+    },
   };
+}
+
+function loadAuthor(db: Database, authorId: number) {
+  return db
+    .select({ id: authorsTable.id, name: authorsTable.name })
+    .from(authorsTable)
+    .where(eq(authorsTable.id, authorId))
+    .limit(1)
+    .then((rows) => rows[0]);
 }
 
 function toPost(row: PostRow): Post {
@@ -124,4 +157,15 @@ function toInsertValues(input: CreatePostInput): NewPost {
     body: input.body ?? null,
     title: input.title,
   };
+}
+
+function toUpdateValues(patch: UpdatePostPatch): Partial<NewPost> {
+  const entries = Object.entries(patch).filter(
+    ([, value]) => value !== undefined
+  );
+  const values = Object.fromEntries(entries) as Partial<NewPost>;
+  if ("body" in values && values.body === undefined) {
+    // keep optional skip
+  }
+  return values;
 }

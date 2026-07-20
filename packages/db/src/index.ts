@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/libsql";
 
 export interface DatabaseConfig {
   authToken?: string;
-  /** e.g. `file:local.db`, `libsql://…` */
+  /** e.g. `file:../../local.db`, `libsql://…` (relative file: = process.cwd()) */
   url: string;
 }
 

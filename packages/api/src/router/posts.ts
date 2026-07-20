@@ -7,6 +7,7 @@ import {
   listPostsOutput,
   postIdInput,
   postSchema,
+  updatePostInput,
 } from "@workspace/domain/posts";
 
 import { publicProcedure } from "../trpc.js";
@@ -53,6 +54,25 @@ export const postsRouter = {
     .input(listPostsInput)
     .output(listPostsOutput)
     .query(({ ctx, input }) => ctx.repos.posts.list(input)),
+
+  update: publicProcedure
+    .input(updatePostInput)
+    .output(postSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...patch } = input;
+      const existing = await ctx.repos.posts.byId(id);
+      if (!existing) {
+        throw notFound();
+      }
+      const post = await ctx.repos.posts.update(id, patch);
+      if (!post) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Author not found",
+        });
+      }
+      return post;
+    }),
 } satisfies TRPCRouterRecord;
 
 function notFound(): TRPCError {
