@@ -36,3 +36,5 @@ dist-ssr
 # local databases (libsql / sqlite)
 *.db
 *.db-*
+
+.tanstack
