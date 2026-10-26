@@ -33,6 +33,28 @@
   // Drizzle table columns follow domain order (id → fields → timestamps),
   // not alphabetical — disable useSortedKeys for schema files only.
   "overrides": [
+    // api tests compose real repos via a devDependency on @workspace/db;
+    // routers themselves must stay on ctx.repos.
+    {
+      "includes": ["packages/api/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@workspace/db", "@workspace/db/**"],
+                    "message": "packages/api uses ctx.repos only — never import @workspace/db."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     {
       "includes": ["packages/db/src/schema/**"],
       "assist": {
