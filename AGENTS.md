@@ -153,8 +153,9 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ## Testing
 
-- Vitest is the shared test runner for `apps/server`, `packages/api`, and `packages/db`
-- Test files live under each package's `test/` directory and use `*.test.ts`
+- Vitest is the shared test runner for `apps/web`, `apps/server`, `packages/api`, and `packages/db`
+- Test files live under each package's `test/` directory and use `*.test.ts` (`*.test.tsx` in `apps/web`)
+- Web tests render real components in jsdom and mock only the network: MSW with the `trpc()` helper in `apps/web/test/msw.ts`
 - Demo code ships with its tests: they are the reference pattern for new tests and are deleted together with the demo (`docs/REMOVE-DEMO.md`)
 - Integration tests get a database from `createTestDb()` (`@workspace/db/testing`): a fresh temp SQLite per test with the current schema — never `local.db` or a remote DB
 - New product behavior and bug fixes must add committed tests; do not use the empty scaffold as a reason to skip coverage

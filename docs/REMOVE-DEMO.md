@@ -33,6 +33,7 @@ packages/api/src/router/posts.ts
 packages/api/test/authors.test.ts
 packages/api/test/posts.test.ts
 apps/web/test/create-dialogs.test.tsx
+apps/web/test/create-post-flow.test.tsx
 apps/web/src/features/authors/**
 apps/web/src/features/posts/**
 apps/web/src/routes/posts/**

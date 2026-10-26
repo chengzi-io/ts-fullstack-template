@@ -130,6 +130,15 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
 Devtools, Query Devtools, Agentation. Guarded so nothing ships to prod; these
 stay in `devDependencies`.
 
+## Testing
+
+- Render real components (Testing Library, jsdom); mock only the network
+- `test/msw.ts` `trpc({ "authors.list": … })` answers `httpBatchLink` calls with
+  superjson, like the API. An unhandled request fails the test
+- `test/setup.ts` resets the shared `queryClient` and UI store after each test
+- Query by role / label as a user would; assert what the user or backend sees
+- `test/create-post-flow.test.tsx` is the reference flow test (demo)
+
 ## Layout
 
 ```text
@@ -147,12 +156,14 @@ src/
   lib/                    trpc, query-client
   config/                 nav / site config, feature flags
   types/                  cross-cutting shared types
+test/                     Vitest + Testing Library + MSW (see Testing)
 ```
 
 ## Commands
 
 ```bash
 pnpm --filter web typecheck
+pnpm --filter web test
 pnpm --filter web build
 pnpm check
 ```
