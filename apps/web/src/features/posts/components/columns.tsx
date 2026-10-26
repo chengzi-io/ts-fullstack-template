@@ -12,8 +12,8 @@ import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 
 import {
+  ColumnHeader,
   createSelectColumn,
-  SortableHeader,
 } from "@/components/blocks/data-table.tsx";
 
 export type Post = RouterOutputs["posts"]["list"]["items"][number];
@@ -86,16 +86,7 @@ export function createPostColumns(handlers: {
       cell: ({ row }) => (
         <span className="font-medium">{row.original.title}</span>
       ),
-      filterFn: (row, _id, value: string) => {
-        const q = value.toLowerCase();
-        const post = row.original;
-        return (
-          post.title.toLowerCase().includes(q) ||
-          (post.body?.toLowerCase().includes(q) ?? false) ||
-          post.author.name.toLowerCase().includes(q)
-        );
-      },
-      header: ({ column }) => <SortableHeader column={column} title="Title" />,
+      header: () => <ColumnHeader title="Title" />,
     },
     {
       accessorKey: "author.name",
@@ -104,7 +95,7 @@ export function createPostColumns(handlers: {
           {row.original.author.name}
         </span>
       ),
-      header: ({ column }) => <SortableHeader column={column} title="Author" />,
+      header: () => <ColumnHeader title="Author" />,
       id: "authorName",
     },
     {
@@ -114,12 +105,7 @@ export function createPostColumns(handlers: {
           {row.original.body || "—"}
         </span>
       ),
-      enableSorting: false,
-      header: () => (
-        <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          Body
-        </span>
-      ),
+      header: () => <ColumnHeader title="Body" />,
     },
     {
       accessorKey: "createdAt",
@@ -128,10 +114,7 @@ export function createPostColumns(handlers: {
           {row.original.createdAt.toLocaleString()}
         </span>
       ),
-      header: ({ column }) => (
-        <SortableHeader column={column} title="Created" />
-      ),
-      sortingFn: "datetime",
+      header: () => <ColumnHeader title="Created" />,
     },
     {
       cell: ({ row }) => (
@@ -143,7 +126,6 @@ export function createPostColumns(handlers: {
         />
       ),
       enableHiding: false,
-      enableSorting: false,
       header: () => <span className="sr-only">Actions</span>,
       id: "actions",
     },

@@ -69,7 +69,7 @@ export const postFormSchema = createPostInput.pick({ authorId: true, title: true
 | Put it in… | When |
 |------------|------|
 | TanStack Query | any server data (lists, byId, mutations, cache) |
-| URL search param | dialog/filter that should survive refresh, deep-link, back button |
+| URL search param (`validateSearch`) | list page / page size / search, and anything else that should survive refresh, deep-link, back button |
 | Zustand (`features/<x>/store.ts`) | UI intent another feature or the route must drive (open this dialog, then continue) and that need not deep-link |
 | `useState` | page-local (delete confirm, hover, ephemeral toggles) |
 | React Hook Form | form field values — never Zustand |
@@ -131,6 +131,11 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
    / `FieldLabel` / `FieldError` primitives.
 6. **Table columns** are built by a `create<Domain>Columns({ onEdit, onDelete })`
    factory in `columns.tsx`, memoized where consumed, driven by `DataTable`.
+7. **Lists page and search on the server.** `DataTable` renders one page and
+   never sorts or filters rows itself; the route keeps `page` / `pageSize` /
+   `q` in URL search params and passes them to the list query (search is
+   debounced with `hooks/use-debounced-value.ts`). Never fetch "all rows" —
+   pickers search too (see the post form's author field).
 
 ## Dev tools
 

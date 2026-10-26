@@ -1,13 +1,7 @@
 import {
-  type Column,
   type ColumnDef,
-  type ColumnFiltersState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
@@ -40,9 +34,6 @@ import {
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
 import {
-  ArrowDownIcon,
-  ArrowUpDownIcon,
-  ArrowUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   Columns3Icon,
@@ -56,7 +47,6 @@ import {
   useState,
 } from "react";
 
-const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50] as const;
 
 export interface DataTableProps<TData> {
@@ -65,58 +55,31 @@ export interface DataTableProps<TData> {
   // createColumnHelper yields mixed TValue columns.
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous column value types
   columns: ColumnDef<TData, any>[];
+  /** The current page's rows only — paging and search happen on the server. */
   data: TData[];
   emptyMessage?: string;
-  /** Column id bound to the search input (column filter). */
-  filterColumnId?: string;
-  filterPlaceholder?: string;
   getRowId: (row: TData) => string;
-  pageSize?: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  /** Omit to hide the search box. */
+  onSearchChange?: (search: string) => void;
+  /** 1-based. */
+  page: number;
+  pageSize: number;
+  search?: string;
+  searchPlaceholder?: string;
   /** Extra controls on the right of the toolbar (after View). */
   toolbarEnd?: ReactNode;
+  /** Rows across every page. */
+  total: number;
 }
 
-export function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
-  if (sorted === "asc") {
-    return <ArrowUpIcon aria-hidden className="size-3.5" />;
-  }
-  if (sorted === "desc") {
-    return <ArrowDownIcon aria-hidden className="size-3.5" />;
-  }
+/** Column title in the table's header style. */
+export function ColumnHeader({ title }: { title: string }) {
   return (
-    <ArrowUpDownIcon
-      aria-hidden
-      className="size-3.5 text-muted-foreground/60"
-    />
-  );
-}
-
-/** Sortable header control used by feature column defs. */
-export function SortableHeader<TData, TValue>({
-  column,
-  className,
-  title,
-}: {
-  className?: string;
-  column: Column<TData, TValue>;
-  title: string;
-}) {
-  const handleClick = useCallback(() => {
-    column.toggleSorting(column.getIsSorted() === "asc");
-  }, [column]);
-
-  return (
-    <button
-      className={cn(
-        "-mx-1 inline-flex items-center gap-1 rounded-none px-1 font-medium text-muted-foreground text-xs uppercase tracking-wide transition-colors hover:text-foreground",
-        className
-      )}
-      onClick={handleClick}
-      type="button"
-    >
+    <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       {title}
-      <SortIcon sorted={column.getIsSorted()} />
-    </button>
+    </span>
   );
 }
 
@@ -242,7 +205,6 @@ export function createSelectColumn<TData>(): ColumnDef<TData, unknown> {
       />
     ),
     enableHiding: false,
-    enableSorting: false,
     header: ({ table }) => {
       let checked: boolean | "indeterminate" = false;
       if (table.getIsAllPageRowsSelected()) {
@@ -262,22 +224,27 @@ export function createSelectColumn<TData>(): ColumnDef<TData, unknown> {
 }
 
 /**
- * Reusable data table shell (from shadcn/registry data-table), adapted for the app:
- * search left · column visibility · client sort/filter/pagination · page size.
+ * Reusable data table shell (from shadcn/registry data-table), adapted for the
+ * app: server-driven paging and search, column visibility, page-scoped
+ * selection. It never sorts or filters rows itself — that would only reorder
+ * the one page it holds.
  */
 export function DataTable<TData>({
   columnLabels = {},
   columns,
   data,
   emptyMessage = "No results.",
-  filterColumnId,
-  filterPlaceholder = "Search…",
   getRowId,
-  pageSize = DEFAULT_PAGE_SIZE,
+  onPageChange,
+  onPageSizeChange,
+  onSearchChange,
+  page,
+  pageSize,
+  search = "",
+  searchPlaceholder = "Search…",
   toolbarEnd,
+  total,
 }: DataTableProps<TData>) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
@@ -285,61 +252,36 @@ export function DataTable<TData>({
     columns,
     data,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getRowId,
-    getSortedRowModel: getSortedRowModel(),
-    initialState: {
-      pagination: { pageSize },
-    },
-    onColumnFiltersChange: setColumnFilters,
+    manualPagination: true,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
+    rowCount: total,
     state: {
-      columnFilters,
       columnVisibility,
+      pagination: { pageIndex: page - 1, pageSize },
       rowSelection,
-      sorting,
     },
   });
 
-  const rawFilter = filterColumnId
-    ? table.getColumn(filterColumnId)?.getFilterValue()
-    : undefined;
-  const filterValue = typeof rawFilter === "string" ? rawFilter : "";
-
-  const handleFilterChange = useCallback(
+  const handleSearchChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
-      if (!filterColumnId) {
-        return;
-      }
-      table.getColumn(filterColumnId)?.setFilterValue(event.target.value);
+      onSearchChange?.(event.target.value);
     },
-    [filterColumnId, table]
-  );
-
-  const handlePageSizeChange = useCallback(
-    (size: number) => {
-      table.setPageSize(size);
-    },
-    [table]
+    [onSearchChange]
   );
 
   const goPrevious = useCallback(() => {
-    table.previousPage();
-  }, [table]);
+    onPageChange(page - 1);
+  }, [onPageChange, page]);
 
   const goNext = useCallback(() => {
-    table.nextPage();
-  }, [table]);
+    onPageChange(page + 1);
+  }, [onPageChange, page]);
 
   const { rows } = table.getRowModel();
-  const { rows: filteredRows } = table.getFilteredRowModel();
-  const totalCount = filteredRows.length;
-  const pageCount = Math.max(table.getPageCount(), 1);
-  const { pageIndex, pageSize: currentPageSize } = table.getState().pagination;
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
+  const selectedCount = Object.keys(rowSelection).length;
 
   const hideableColumns = useMemo(
     () => table.getAllColumns().filter((column) => column.getCanHide()),
@@ -349,19 +291,19 @@ export function DataTable<TData>({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        {filterColumnId ? (
+        {onSearchChange ? (
           <div className="relative">
             <SearchIcon
               aria-hidden
               className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
-              aria-label={filterPlaceholder}
+              aria-label={searchPlaceholder}
               className="h-7 w-48 pl-8 text-sm sm:w-56"
-              onChange={handleFilterChange}
-              placeholder={filterPlaceholder}
+              onChange={handleSearchChange}
+              placeholder={searchPlaceholder}
               type="search"
-              value={filterValue}
+              value={search}
             />
           </div>
         ) : null}
@@ -461,7 +403,7 @@ export function DataTable<TData>({
                   className="h-24 text-center text-muted-foreground text-sm"
                   colSpan={columns.length}
                 >
-                  {filterValue ? emptyMessage : "No results."}
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -471,9 +413,9 @@ export function DataTable<TData>({
         <div className="flex flex-col gap-3 border-border border-t bg-muted/20 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-xs">
             <span className="font-medium text-foreground tabular-nums">
-              {totalCount}
+              {total}
             </span>{" "}
-            {totalCount === 1 ? "result" : "results"}
+            {total === 1 ? "result" : "results"}
             {selectedCount > 0 ? (
               <>
                 {" · "}
@@ -487,15 +429,15 @@ export function DataTable<TData>({
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <PageSizeSelect
-              onPageSizeChange={handlePageSizeChange}
-              pageSize={currentPageSize}
+              onPageSizeChange={onPageSizeChange}
+              pageSize={pageSize}
             />
 
             <div className="flex items-center gap-1.5">
               <Button
                 aria-label="Previous page"
                 className="size-7"
-                disabled={!table.getCanPreviousPage()}
+                disabled={page <= 1}
                 onClick={goPrevious}
                 size="icon"
                 type="button"
@@ -504,12 +446,12 @@ export function DataTable<TData>({
                 <ChevronLeftIcon aria-hidden className="size-3.5" />
               </Button>
               <span className="px-1 text-muted-foreground text-xs tabular-nums">
-                Page {pageIndex + 1} of {pageCount}
+                Page {page} of {pageCount}
               </span>
               <Button
                 aria-label="Next page"
                 className="size-7"
-                disabled={!table.getCanNextPage()}
+                disabled={page >= pageCount}
                 onClick={goNext}
                 size="icon"
                 type="button"

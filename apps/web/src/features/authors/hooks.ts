@@ -1,13 +1,18 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 
 import { trpc } from "@/lib/trpc.ts";
 
-import { authorByIdQueryOptions, authorsListQueryOptions } from "./api.ts";
+import {
+  type AuthorsListInput,
+  authorByIdQueryOptions,
+  authorsListQueryOptions,
+} from "./api.ts";
 
-export function useAuthorsQuery(options?: { enabled?: boolean }) {
+/** Keeps the current page on screen while the next one loads. */
+export function useAuthorsQuery(input: AuthorsListInput) {
   return useQuery({
-    ...authorsListQueryOptions(),
-    enabled: options?.enabled,
+    ...authorsListQueryOptions(input),
+    placeholderData: keepPreviousData,
   });
 }
 

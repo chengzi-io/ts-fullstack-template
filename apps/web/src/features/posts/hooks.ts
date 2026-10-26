@@ -1,13 +1,18 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { authorsListQueryOptions } from "@/features/authors/api.ts";
 import { trpc } from "@/lib/trpc.ts";
 
-import { postByIdQueryOptions, postsListQueryOptions } from "./api.ts";
+import {
+  type PostsListInput,
+  postByIdQueryOptions,
+  postsListQueryOptions,
+} from "./api.ts";
 
-export function usePostsQuery(options?: { enabled?: boolean }) {
+/** Keeps the current page on screen while the next one loads. */
+export function usePostsQuery(input: PostsListInput) {
   return useQuery({
-    ...postsListQueryOptions(),
-    enabled: options?.enabled,
+    ...postsListQueryOptions(input),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -22,11 +27,18 @@ export function usePostQuery(
   });
 }
 
-/** Authors for the post form's picker — read through the authors feature's api.ts. */
-export function useAuthorOptionsQuery(options?: { enabled?: boolean }) {
+/**
+ * Authors matching the picker's search (first page) — read through the
+ * authors feature's api.ts.
+ */
+export function useAuthorOptionsQuery(
+  q: string,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
-    ...authorsListQueryOptions(),
+    ...authorsListQueryOptions({ q: q || undefined }),
     enabled: options?.enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
