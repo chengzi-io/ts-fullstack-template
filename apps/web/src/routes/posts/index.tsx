@@ -4,12 +4,14 @@ import { cn } from "@workspace/ui/lib/utils";
 import { useCallback, useState } from "react";
 import { DeleteConfirmDialog } from "@/components/blocks/delete-confirm-dialog.tsx";
 import { PageHeader } from "@/components/blocks/page-header.tsx";
+import { AuthorDialog } from "@/features/authors/components/dialog.tsx";
+import { PostDialog } from "@/features/posts/components/dialog.tsx";
 import { PostsTable } from "@/features/posts/components/table.tsx";
 import {
   useDeletePostMutation,
   usePostsQuery,
 } from "@/features/posts/hooks.ts";
-import { usePostActions } from "@/stores/selectors.ts";
+import { usePostActions } from "@/features/posts/store.ts";
 
 export const Route = createFileRoute("/posts/")({
   component: PostsPage,
@@ -60,7 +62,7 @@ function PostsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        description="Full CRUD via tRPC. Create/edit use root dialogs; list uses DataTable (sort / filter / client pagination)."
+        description="Full CRUD via tRPC. Create/edit dialogs are mounted by this route; list uses DataTable (sort / filter / client pagination)."
         title="Posts"
       />
 
@@ -124,6 +126,10 @@ function PostsPage() {
         open={deleteId !== null}
         title="Delete post?"
       />
+
+      {/* The post dialog can hand off to the author dialog, so mount both. */}
+      <PostDialog />
+      <AuthorDialog />
     </div>
   );
 }

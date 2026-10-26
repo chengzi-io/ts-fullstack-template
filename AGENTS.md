@@ -41,7 +41,7 @@ flowchart LR
 
 **Red lines**
 
-- `apps/web` must not import `@workspace/db` or value-import `@workspace/api` root
+- `apps/web` must not import `@workspace/db` or value-import `@workspace/api` root (Biome-enforced)
 - `packages/api` uses `ctx.repos` only — no raw `db` on context
 - Shapes live in `@workspace/domain`; SQL lives in `@workspace/db`
 - Prefer the nearest package `AGENTS.md` when editing that package

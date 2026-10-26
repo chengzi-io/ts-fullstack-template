@@ -3,12 +3,14 @@
 Vite SPA. **Feature-first**, thin routes. Server state = tRPC + TanStack Query,
 client intent = Zustand, form values = React Hook Form. Workspace map: root `AGENTS.md`.
 
-## Import boundaries (enforced)
+## Import boundaries (Biome-enforced — `biome.jsonc` overrides)
 
-- Type-import `AppRouter` / `RouterInputs` / `RouterOutputs` from `@workspace/api` — never value-import the package root
-- Value-import Zod only from `@workspace/domain/*` — never `@workspace/db`
-- A route may import a feature's **`components/*` and `hooks.ts` only**. Never its `api.ts` or `model/*`
-- Features must not import another feature's internals. The one legal cross-feature link is another feature's **`api.ts` query options** (e.g. posts lists authors for its picker)
+- `@workspace/api`: type-import `AppRouter` / `RouterInputs` / `RouterOutputs` only
+- `@workspace/db` and `@workspace/api/*` are server-only — never imported here
+- Value-import Zod from `@workspace/domain/*`
+- A route uses a feature's `components/*`, `hooks.ts` and `store.ts` — never its `api.ts` or `model/*`
+- A feature reaches another feature only through its **`api.ts`** (query options) or **`store.ts`** (actions) — e.g. posts lists authors for its picker and opens the author dialog. Never its components, hooks or model
+- Dependencies between features point one way (posts → authors, never back)
 - Never invalidate another feature's keys: every successful mutation invalidates all queries (`lib/query-client.ts`)
 - No barrel files. The folder is the namespace
 
@@ -20,13 +22,13 @@ Four layers, each may only depend downward:
 |-------|----------|---------------|---------|
 | primitive | `@workspace/ui/components` | no | `Button`, `Dialog` |
 | block | `components/blocks` | no | `DataTable`, `PageHeader` |
-| feature | `features/<domain>` | yes | `CreatePostDialog` |
+| feature | `features/<domain>` | yes | `PostDialog` |
 | layout | `components/layout` | orchestration (shell) | `AppShell` |
-| app | `components/app` | orchestration (outlets) | `CreateDialogs` |
 
 Reusable-but-domain-free UI goes to `blocks`, not into a feature. Pure layout
-shells (nav/header/footer/sidebar) go to `components/layout`. Cross-feature
-orchestration outlets (root-mounted dialogs, resume flows) go to `components/app`.
+shells (nav/header/footer/sidebar) go to `components/layout`. Dialogs are
+mounted by the routes that open them — there is no app-wide outlet, so a
+feature's code ships with its route chunk.
 
 ## Feature anatomy
 
@@ -38,12 +40,13 @@ Kebab-case everywhere.
 features/<domain>/
   api.ts          tRPC queryOptions — NO React; what other features may import
   hooks.ts        thin React wrappers over api.ts (use<Domain>Query, use...Mutation)
+  store.ts        this feature's Zustand store (dialog state + actions)
   model/form.ts   Zod form schema + defaults + UI↔wire mappers (to*Input)
   components/
     table.tsx
     columns.tsx
     form.tsx
-    create-dialog.tsx
+    dialog.tsx    create + edit
 ```
 
 **Why split `api.ts` from `hooks.ts`:** query options are React-free, so loaders
@@ -67,44 +70,48 @@ export const postFormSchema = createPostInput.pick({ authorId: true, title: true
 |------------|------|
 | TanStack Query | any server data (lists, byId, mutations, cache) |
 | URL search param | dialog/filter that should survive refresh, deep-link, back button |
-| Zustand (`stores/`) | intent that is cross-feature AND root-mounted AND not deep-linkable |
+| Zustand (`features/<x>/store.ts`) | UI intent another feature or the route must drive (open this dialog, then continue) and that need not deep-link |
 | `useState` | page-local (delete confirm, hover, ephemeral toggles) |
 | React Hook Form | form field values — never Zustand |
 
 Never put `posts`/`authors` rows in Zustand. Mutations refresh the cache
 globally; dialogs close/resume via the store.
 
-Root-mounted dialogs pass `enabled: isOpen` (and edit id) into feature queries so
-closed dialogs don't fetch, and reset mutation error state on close.
+Dialogs pass `enabled: isOpen` (and edit id) into feature queries so closed
+dialogs don't fetch, and reset mutation error state on close. Effect deps use
+the stable `mutation.reset`, never the `useMutation` result object (it is new
+every render — depending on it caused an app-wide re-render loop).
 
 ## Zustand conventions
 
-One store, composed from **slices** by concern. Never one flat god-interface.
+**One small store per feature**, in `features/<domain>/store.ts`. No app-wide
+store, so a feature adds no shared registry entry and features cannot write
+each other's state.
 
-```text
-stores/
-  index.ts            create() + devtools + spread every slice
-  types.ts            StoreState = DialogSlice & NavSlice & ...
-  selectors.ts        named selector hooks (the public read API)
-  slices/
-    dialog.slice.ts   StateCreator<StoreState, [], [], DialogSlice>
+```ts
+type PostDialog = { mode: "closed" } | { mode: "create" } | { mode: "edit"; id: number };
+
+const usePostsStore = create<PostsStore>()(devtools((set) => ({
+  actions: { close, openCreate, openEdit },   // created once, never replaced
+  dialog: { mode: "closed" },
+}), { enabled: import.meta.env.DEV, name: "posts" }));
+
+export const usePostDialog = () => usePostsStore((s) => s.dialog);
+export const usePostActions = () => usePostsStore((s) => s.actions);
 ```
 
 Rules:
 
-1. **Always select a slice, never the whole store.** `useUiStore()` with no
-   selector subscribes to everything and re-renders on any change — banned.
-   Single value: `useUiStore((s) => s.postDialog)`. Multiple values: wrap in
-   `useShallow`. Prefer the named selector hooks in `selectors.ts` so components
-   don't hand-write subscriptions.
-2. **Actions are reference-stable** — Zustand never recreates them. Do not wrap
-   them in `useCallback` and do not list them in effect deps for that reason.
-3. **Model exclusive UI as a discriminated union**, not parallel booleans:
-   `{ mode: "closed" } | { mode: "create" } | { mode: "edit"; id: number }`.
-4. `devtools` middleware, DEV-only, with a `name`. Do not `persist` transient
+1. **Export selector hooks, not the store.** Components never call the store
+   with no selector (that subscribes to everything).
+2. **Actions live in one `actions` object** created once — select it directly;
+   no `useShallow`, no `useCallback` wrappers.
+3. **Model exclusive UI as a discriminated union**, not parallel booleans.
+4. **Continue another feature's flow with a callback**, not a flag naming it:
+   `openCreateAuthor({ onCreated: openCreatePost })` — authors never learns
+   that posts exists.
+5. `devtools` middleware, DEV-only, with a `name`. Do not `persist` transient
    intent (dialogs); only persist real user preferences with `partialize`.
-5. Each slice owns one concern. Cross-slice writes go through the combined
-   `StoreState` typing on `StateCreator`, not a second store.
 
 ## shadcn / component conventions
 
@@ -136,9 +143,12 @@ stay in `devDependencies`.
 - Render real components (Testing Library, jsdom); mock only the network
 - `test/msw.ts` `trpc({ "authors.list": … })` answers `httpBatchLink` calls with
   superjson, like the API. An unhandled request fails the test
-- `test/setup.ts` resets the shared `queryClient` and UI store after each test
+- `test/setup.ts` clears the shared `queryClient`; `__mocks__/zustand.ts`
+  (Zustand's documented pattern) resets every feature store after each test
+- Render a page through its route: `Route.options.component`
 - Query by role / label as a user would; assert what the user or backend sees
-- `test/create-post-flow.test.tsx` is the reference flow test (demo)
+- `test/posts-page.test.tsx` is the reference page test (demo): a full flow
+  plus an idle-render guard
 
 ## Layout
 
@@ -149,15 +159,14 @@ src/
   components/
     blocks/              domain-free reusable UI (data-table, page-header)
     layout/              pure layout shells (app-shell; future nav/sidebar/footer)
-    app/                 cross-feature outlets (create-dialogs)
     theme-provider.tsx   global theme provider
     dev-tools.tsx         DEV-only
-  stores/                 Zustand slices (see conventions)
   hooks/                  cross-feature hooks (use-debounce, use-media-query)
   lib/                    trpc, query-client
   config/                 nav / site config, feature flags
   types/                  cross-cutting shared types
 test/                     Vitest + Testing Library + MSW (see Testing)
+__mocks__/zustand.ts      resets feature stores between tests
 ```
 
 ## Commands

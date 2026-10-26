@@ -30,8 +30,6 @@
       "!**/drizzle/meta"
     ]
   },
-  // Drizzle table columns follow domain order (id → fields → timestamps),
-  // not alphabetical — disable useSortedKeys for schema files only.
   "overrides": [
     // api tests compose real repos via a devDependency on @workspace/db;
     // routers themselves must stay on ctx.repos.
@@ -55,6 +53,124 @@
         }
       }
     },
+    // Biome replaces (not merges) rule options across overrides, so the
+    // feature and route overrides below repeat the web-wide restrictions.
+    {
+      "includes": ["apps/web/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@workspace/api": {
+                    "allowImportNames": [
+                      "AppRouter",
+                      "RouterInputs",
+                      "RouterOutputs"
+                    ],
+                    "message": "apps/web may only type-import AppRouter / RouterInputs / RouterOutputs from @workspace/api."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/api/**"
+                    ],
+                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@workspace/api": {
+                    "allowImportNames": [
+                      "AppRouter",
+                      "RouterInputs",
+                      "RouterOutputs"
+                    ],
+                    "message": "apps/web may only type-import AppRouter / RouterInputs / RouterOutputs from @workspace/api."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/api/**"
+                    ],
+                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                  },
+                  {
+                    "group": [
+                      "@/features/*/components/**",
+                      "@/features/*/hooks.ts",
+                      "@/features/*/model/**"
+                    ],
+                    "message": "Reach another feature only through its api.ts (query options) or store.ts (actions)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/routes/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@workspace/api": {
+                    "allowImportNames": [
+                      "AppRouter",
+                      "RouterInputs",
+                      "RouterOutputs"
+                    ],
+                    "message": "apps/web may only type-import AppRouter / RouterInputs / RouterOutputs from @workspace/api."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/api/**"
+                    ],
+                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                  },
+                  {
+                    "group": ["@/features/*/api.ts", "@/features/*/model/**"],
+                    "message": "Routes use a feature's components, hooks.ts and store.ts — not its api.ts or model/."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    // Drizzle table columns follow domain order (id → fields → timestamps),
+    // not alphabetical — disable useSortedKeys for schema files only.
     {
       "includes": ["packages/db/src/schema/**"],
       "assist": {
