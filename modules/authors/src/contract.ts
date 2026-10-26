@@ -1,7 +1,6 @@
-/** Demo — delete with posts. */
+/** Demo — delete with posts. Browser-safe: Zod shapes and their types only. */
+import { paginatedOutput, paginationInput } from "@workspace/kernel/pagination";
 import { z } from "zod";
-
-import { paginatedOutput, paginationInput } from "./pagination.js";
 
 export const authorIdSchema = z.number().int().positive("Invalid author id");
 
@@ -52,15 +51,3 @@ export type UpdateAuthorInput = z.output<typeof updateAuthorInput>;
 export type UpdateAuthorPatch = Omit<UpdateAuthorInput, "id">;
 export type ListAuthorsInput = z.output<typeof listAuthorsInput>;
 export type ListAuthorsResult = z.output<typeof listAuthorsOutput>;
-
-/** Aligns with tRPC `authors.*`. Throws `@workspace/domain/errors` on expected failures. */
-export interface AuthorsRepo {
-  /** NotFoundError when missing. */
-  byId: (id: number) => Promise<Author>;
-  create: (input: CreateAuthorInput) => Promise<Author>;
-  /** NotFoundError when missing; ConflictError while other rows reference it. */
-  delete: (id: number) => Promise<void>;
-  list: (query: ListAuthorsInput) => Promise<ListAuthorsResult>;
-  /** NotFoundError when missing. */
-  update: (id: number, patch: UpdateAuthorPatch) => Promise<Author>;
-}

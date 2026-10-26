@@ -16,10 +16,10 @@ Workspace map: root `AGENTS.md`. Routers: `@workspace/api`. Data: `@workspace/db
 
 ## Constraints
 
-- Composition root (`src/index.ts`): env → `createDb` → `createRepos` → `createApp` → listen
-- tRPC context: `{ log, repos, requestId, session? }` — **no raw `db`**
-- Keep `db` on the host only for `ping` / `close` and probes
-- Do **not** import `drizzle-orm` or implement repositories here
+- Composition root (`src/index.ts`): env → `createDb` → `createApp({ db, log, router: appRouter })` → listen
+- tRPC context: `createTRPCContext({ db, log, requestId, session? })` from `@workspace/kernel/context`; modules build their repos from `db`
+- The host itself uses `db` only for `ping` / `close` and probes
+- Do **not** import `drizzle-orm` or a module here — the host knows no business capability
 - `DATABASE_*` live in `packages/db/.env` (or platform), **not** `apps/server/.env`
 - Scripts: `--env-file-if-exists=../../packages/db/.env --env-file-if-exists=.env`
 - Never log `DATABASE_AUTH_TOKEN`
@@ -31,17 +31,16 @@ Workspace map: root `AGENTS.md`. Routers: `@workspace/api`. Data: `@workspace/db
 flowchart TB
   server["apps/server<br/>env · Hono · mount · shutdown"]
 
-  api["@workspace/api"] -->|"appRouter + createTRPCContext"| server
-  db["@workspace/db"] -->|"createDb + createRepos"| server
-  domain["@workspace/domain"] -->|"AppRepos types"| server
-  server -.->|"must not"| forbidden["schema SQL · procedure Zod · React"]
+  api["@workspace/api"] -->|"appRouter"| server
+  kernel["@workspace/kernel"] -->|"createTRPCContext"| server
+  db["@workspace/db"] -->|"createDb"| server
+  server -.->|"must not"| forbidden["modules · SQL · React"]
 ```
 
 | Concern | Where |
 |---------|--------|
-| Procedures | `@workspace/api` |
-| Tables / repos | `@workspace/db` |
-| Wire Zod | `@workspace/domain` |
+| Procedures, tables, repos, wire Zod | `modules/<domain>` |
+| Composition (`appRouter`) | `@workspace/api` |
 | HTTP host | this app |
 
 ## Layout
@@ -57,7 +56,7 @@ src/
   routes/probes.ts      /healthz · /readyz
 test/
   app.ts                createTestApp() → real app on createTestDb(), silent logger
-  app.test.ts           probes · request id · error contract
+  app.test.ts           probes · request id · error contract (test router)
   shutdown.test.ts      injected server / DB / exit / timers
   env.test.ts           fail-fast config
 tsup.config.ts
@@ -88,7 +87,8 @@ scripts/smoke-build.mjs
 ## Testing
 
 - Prefer `createApp(...)` + `app.request()` — no real listen port
-- Use `test/app.ts` `createTestApp()` — silent logger, temp DB from `createTestDb()`
+- Use `test/app.ts` `createTestApp()` — silent logger, temp DB from `createTestDb()`,
+  and a tiny test router: host tests never depend on a business module
 - Shutdown tests inject server/DB/exit/timers — never real `process.exit` in unit tests
 - Do not use developer `.env` or `local.db`
 - `pnpm --filter server test` includes build smoke (`GET /healthz` on `dist`)

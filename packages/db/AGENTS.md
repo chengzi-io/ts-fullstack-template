@@ -1,101 +1,39 @@
 # @workspace/db
 
-Data layer: Drizzle **schema**, **repo implementations**, **`createDb`**, and kit migrations.
+Database plumbing shared by every module: the client, the transaction-aware
+`Executor` type, constraint helpers, the test database, and drizzle-kit
+config + migrations. **Tables and queries live in `modules/<domain>`**, not here.
 No Hono / tRPC / React. No `process.env` inside `createDb`.
-
-Workspace map: root `AGENTS.md`. Contracts (`*Repo`, Zod): `@workspace/domain`.
-
-## Responsibility
-
-| Owns | Does not own |
-|------|----------------|
-| Tables under `src/schema/` | Wire Zod / tRPC routers |
-| `createXxxRepo` + `createRepos` | HTTP env (`PORT`, CORS, …) |
-| `createDb` → `ping` / `close` | Import-time DB singleton |
-| Kit `.env` `DATABASE_*` only | App-wide secrets |
-
-## Constraints
-
-- **Do** implement `@workspace/domain` `*Repo`; method names match tRPC
-- **Do** pass config into `createDb({ url, authToken? })` from the host
-- Relative `file:` paths use **process.cwd()**; template `.env` uses `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share monorepo-root `local.db`
-- **Do not** read `process.env` in runtime client code (kit may; `createDb` must not)
-- **Do not** depend on `@workspace/api`, Hono, React
-- **Do not** let `apps/web` import this package
-- **Do not** add `src/schema/index.ts` barrels — use `@workspace/db/schema/<name>`
-- Demo `authors` / `posts` are disposable; template keeps `drizzle/` empty (use `db:push`)
-
-## This package’s edge
-
-```mermaid
-flowchart TB
-  db["@workspace/db<br/>schema · repos · createDb"]
-
-  domain["@workspace/domain"] -->|"*Repo contracts"| db
-  server["apps/server"] -->|"createDb + createRepos"| db
-  db -.->|"must not"| forbidden["api · web · Hono · tRPC · env in createDb"]
-```
-
-| Who | How |
-|-----|-----|
-| `apps/server` | `createDb` → `createRepos` → inject `repos`; `ping` / `close` on host |
-| `packages/api` | Only via `ctx.repos` (never import db client in routers) |
-| `packages/domain` | Ports this package implements |
-| `apps/web` | Never |
 
 ## Public surface
 
-| Import | File |
+| Import | What |
 |--------|------|
-| `@workspace/db` | `src/index.ts` — `createDb`, `Database`, `isForeignKeyViolation` |
-| `@workspace/db/repos` | `src/repos/index.ts` — `createRepos` |
-| `@workspace/db/schema/<name>` | `src/schema/<name>.ts` |
-| `@workspace/db/testing` | `src/testing.ts` — `createTestDb()` (tests only) |
+| `@workspace/db` | `createDb(config)` → `ping` / `close`; `Database`; `Executor` (db or transaction); `isForeignKeyViolation(error)` |
+| `@workspace/db/testing` | `createTestDb()` — tests only |
 
 ```ts
-import { createDb } from "@workspace/db";
-import { createRepos } from "@workspace/db/repos";
-
 const db = createDb({ url: env.DATABASE_URL, authToken: env.DATABASE_AUTH_TOKEN });
-const repos = createRepos(db);
 await db.ping();
 db.close();
 ```
 
-Hosts should not import `drizzle-orm` for readiness — use `db.ping()` / `db.close()`.
+## Constraints
 
-## Layout
+- The host validates env and passes config into `createDb({ url, authToken? })`
+- Relative `file:` paths use **process.cwd()**; template `.env` uses
+  `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share
+  the monorepo-root `local.db`
+- `isForeignKeyViolation` matches SQLite's message, not `extendedCode`:
+  an `onDelete: "restrict"` delete reports `SQLITE_CONSTRAINT_TRIGGER`
+- Never depend on `@workspace/kernel`, a module, Hono, or React — this package
+  sits at the bottom
 
-```text
-src/
-  index.ts           createDb + Database
-  repos/
-    index.ts         createRepos → AppRepos
-    authors.ts       demo
-    posts.ts         demo (join author)
-  schema/
-    authors.ts       demo
-    posts.ts         demo FK → authors
-drizzle/             empty in template; real migrations later
-drizzle.config.ts    kit (requires DATABASE_URL)
-.env.example         DATABASE_URL / DATABASE_AUTH_TOKEN
-```
+## Schema discovery
 
-## Schema & repos
-
-- One domain (or tight set) per `schema/<name>.ts`
-- Column order: keys → fields → timestamps (not alphabetical)
-- Repos map rows to **domain** shapes (`toPaginatedResult`, joins for nested author)
-- Expected failures are thrown as `@workspace/domain/errors` (`NotFoundError`, `ConflictError`, `InvalidReferenceError`) — never returned as `null` / flags
-- Constraints are the source of truth: write, then translate `isForeignKeyViolation(error)`; no check-then-write lookups (they race)
-- Prefer `$inferInsert` / `$inferSelect` **inside** repos; do not export row types as a second public API next to domain Zod
-
-### Add a table
-
-1. `src/schema/<name>.ts` + `src/repos/<name>.ts`
-2. Register in `repos/index.ts` + domain `AppRepos`
-3. Iterate with `pnpm db:push`
-4. When stable: `pnpm db:generate` → commit `drizzle/**` → `pnpm db:migrate`
+Every module keeps its tables in `modules/<name>/src/schema.ts`. Both
+`drizzle.config.ts` and `createTestDb()` glob that path, so adding a module
+needs no change here.
 
 ## Migrations
 
@@ -116,8 +54,10 @@ Demo schema: **push only** — do not commit demo migrations.
 
 ## Testing
 
-- `createTestDb()` gives each test a temp SQLite file with the current schema (`drizzle-kit export`, not migrations)
+- `createTestDb()` gives each caller a temp SQLite file with every module's
+  current tables (`drizzle-kit export`, not migrations); with no modules it is empty
 - `dispose()` closes the client and deletes the file with `-wal` / `-shm`; it also runs when schema setup fails
+- Modules use it through `createTestContext()` (`@workspace/kernel/testing`)
 - Do not hit developer `local.db` or remote DBs
 
 ## Commands
@@ -125,5 +65,4 @@ Demo schema: **push only** — do not commit demo migrations.
 ```bash
 pnpm db:push | db:generate | db:migrate | db:studio | db:check
 pnpm --filter @workspace/db typecheck
-pnpm --filter @workspace/db test
 ```

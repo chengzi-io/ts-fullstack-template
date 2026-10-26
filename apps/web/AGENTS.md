@@ -7,7 +7,7 @@ client intent = Zustand, form values = React Hook Form. Workspace map: root `AGE
 
 - `@workspace/api`: type-import `AppRouter` / `RouterInputs` / `RouterOutputs` only
 - `@workspace/db` and `@workspace/api/*` are server-only — never imported here
-- Value-import Zod from `@workspace/domain/*`
+- Value-import Zod from module contracts: `@workspace/<module>/contract`
 - A route uses a feature's `components/*`, `hooks.ts` and `store.ts` — never its `api.ts` or `model/*`
 - A feature reaches another feature only through its **`api.ts`** (query options) or **`store.ts`** (actions) — e.g. posts lists authors for its picker and opens the author dialog. Never its components, hooks or model
 - Dependencies between features point one way (posts → authors, never back)

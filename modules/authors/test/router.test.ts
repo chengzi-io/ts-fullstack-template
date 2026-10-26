@@ -1,13 +1,23 @@
-/** Demo — delete with the authors router. */
+/** Demo — delete with the authors module. */
+import { createTestContext } from "@workspace/kernel/testing";
+import { createCallerFactory, createTRPCRouter } from "@workspace/kernel/trpc";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createTestCaller, type TestCaller } from "./caller.js";
+import { createAuthorsRepo } from "../src/repo.js";
+import { authorsRouter } from "../src/router.js";
 
-let caller: TestCaller;
+const createCaller = createCallerFactory(
+  createTRPCRouter({ authors: authorsRouter })
+);
+
+let caller: ReturnType<typeof createCaller>;
+let db: Awaited<ReturnType<typeof createTestContext>>["db"];
 let dispose: () => Promise<void>;
 
 beforeEach(async () => {
-  ({ caller, dispose } = await createTestCaller());
+  const test = await createTestContext();
+  caller = createCaller(test.ctx);
+  ({ db, dispose } = test);
 });
 
 afterEach(async () => {
@@ -77,7 +87,7 @@ describe("authors", () => {
     });
   });
 
-  it("deletes an author without posts", async () => {
+  it("deletes an author", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 
     await expect(caller.authors.delete({ id })).resolves.toEqual({ ok: true });
@@ -86,12 +96,14 @@ describe("authors", () => {
     });
   });
 
-  it("refuses to delete an author who still has posts", async () => {
-    const { id } = await caller.authors.create({ name: "Ada" });
-    await caller.posts.create({ authorId: id, title: "Hello" });
+  it("joins a surrounding transaction and rolls back with it", async () => {
+    await expect(
+      db.transaction(async (tx) => {
+        await createAuthorsRepo(tx).create({ name: "Ada" });
+        tx.rollback();
+      })
+    ).rejects.toThrow();
 
-    await expect(caller.authors.delete({ id })).rejects.toMatchObject({
-      code: "CONFLICT",
-    });
+    await expect(caller.authors.list()).resolves.toMatchObject({ total: 0 });
   });
 });

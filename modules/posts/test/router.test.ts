@@ -1,13 +1,22 @@
-/** Demo — delete with the posts router. */
+/** Demo — delete with the posts module. */
+import { authorsRouter } from "@workspace/authors/router";
+import { createTestContext } from "@workspace/kernel/testing";
+import { createCallerFactory, createTRPCRouter } from "@workspace/kernel/trpc";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createTestCaller, type TestCaller } from "./caller.js";
+import { postsRouter } from "../src/router.js";
 
-let caller: TestCaller;
+const createCaller = createCallerFactory(
+  createTRPCRouter({ authors: authorsRouter, posts: postsRouter })
+);
+
+let caller: ReturnType<typeof createCaller>;
 let dispose: () => Promise<void>;
 
 beforeEach(async () => {
-  ({ caller, dispose } = await createTestCaller());
+  const test = await createTestContext();
+  caller = createCaller(test.ctx);
+  ({ dispose } = test);
 });
 
 afterEach(async () => {
@@ -98,6 +107,15 @@ describe("posts", () => {
     await expect(caller.posts.delete({ id })).resolves.toEqual({ ok: true });
     await expect(caller.posts.byId({ id })).rejects.toMatchObject({
       code: "NOT_FOUND",
+    });
+  });
+
+  it("keeps an author who still has posts", async () => {
+    const { id } = await caller.authors.create({ name: "Ada" });
+    await caller.posts.create({ authorId: id, title: "Hello" });
+
+    await expect(caller.authors.delete({ id })).rejects.toMatchObject({
+      code: "CONFLICT",
     });
   });
 });

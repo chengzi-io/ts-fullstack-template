@@ -1,8 +1,10 @@
-/** Demo — delete with authors. Output includes author. */
+/** Demo — delete with authors. Output includes author. Browser-safe. */
+import {
+  authorIdSchema,
+  authorSummarySchema,
+} from "@workspace/authors/contract";
+import { paginatedOutput, paginationInput } from "@workspace/kernel/pagination";
 import { z } from "zod";
-
-import { authorIdSchema, authorSummarySchema } from "./authors.js";
-import { paginatedOutput, paginationInput } from "./pagination.js";
 
 export const postIdSchema = z.number().int().positive("Invalid post id");
 
@@ -62,16 +64,3 @@ export type UpdatePostInput = z.output<typeof updatePostInput>;
 export type UpdatePostPatch = Omit<UpdatePostInput, "id">;
 export type ListPostsInput = z.output<typeof listPostsInput>;
 export type ListPostsResult = z.output<typeof listPostsOutput>;
-
-/** Aligns with tRPC `posts.*`. Throws `@workspace/domain/errors` on expected failures. */
-export interface PostsRepo {
-  /** NotFoundError when missing. */
-  byId: (id: number) => Promise<Post>;
-  /** InvalidReferenceError for an unknown authorId. */
-  create: (input: CreatePostInput) => Promise<Post>;
-  /** NotFoundError when missing. */
-  delete: (id: number) => Promise<void>;
-  list: (query: ListPostsInput) => Promise<ListPostsResult>;
-  /** NotFoundError when missing; InvalidReferenceError for an unknown authorId. */
-  update: (id: number, patch: UpdatePostPatch) => Promise<Post>;
-}

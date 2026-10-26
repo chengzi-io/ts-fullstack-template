@@ -79,10 +79,7 @@ describe("error contract", () => {
   });
 
   it("rejects bodies over the limit with 413", async () => {
-    const res = await postJson(
-      "/trpc/authors.create",
-      "x".repeat(BODY_LIMIT_BYTES + 1)
-    );
+    const res = await postJson("/trpc/echo", "x".repeat(BODY_LIMIT_BYTES + 1));
 
     expect(res.status).toBe(413);
     expect(await res.json()).toEqual({
@@ -93,7 +90,7 @@ describe("error contract", () => {
 
   it("returns field errors and the request id for invalid tRPC input", async () => {
     const res = await postJson(
-      "/trpc/authors.create",
+      "/trpc/echo",
       JSON.stringify({ json: { name: "" } })
     );
     const body = await res.json();
@@ -109,7 +106,7 @@ describe("error contract", () => {
   it("masks internal failures behind a generic message", async () => {
     db.close();
 
-    const res = await app.request("/trpc/authors.list");
+    const res = await app.request("/trpc/ping");
     const text = await res.text();
     const body = JSON.parse(text);
 

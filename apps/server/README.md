@@ -5,9 +5,10 @@ HTTP host: **Hono** + tRPC mount. See `AGENTS.md` for agent-oriented boundaries.
 | Concern | Package |
 |---------|---------|
 | Process / env / CORS / probes | **this app** |
-| Routers / context | `@workspace/api` |
-| Domain Zod / repo ports | `@workspace/domain` |
-| Schema / `createDb` / repos | `@workspace/db` |
+| Procedures / Zod / schema / repos | `modules/<domain>` |
+| `appRouter` composition | `@workspace/api` |
+| tRPC context / procedures | `@workspace/kernel` |
+| `createDb` | `@workspace/db` |
 
 ## Setup
 

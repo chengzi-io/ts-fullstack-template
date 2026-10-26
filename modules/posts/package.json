@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/posts",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "exports": {
+    "./contract": "./src/contract.ts",
+    "./router": "./src/router.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.18.0",
+    "@workspace/authors": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/kernel": "workspace:*",
+    "drizzle-orm": "1.0.0-rc.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "~6"
+  }
+}

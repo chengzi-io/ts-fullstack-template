@@ -31,30 +31,8 @@
     ]
   },
   "overrides": [
-    // api tests compose real repos via a devDependency on @workspace/db;
-    // routers themselves must stay on ctx.repos.
-    {
-      "includes": ["packages/api/src/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": ["@workspace/db", "@workspace/db/**"],
-                    "message": "packages/api uses ctx.repos only — never import @workspace/db."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    // Biome replaces (not merges) rule options across overrides, so the
-    // feature and route overrides below repeat the web-wide restrictions.
+    // Biome replaces (not merges) rule options across overrides, so the more
+    // specific overrides below repeat the restrictions of the broader ones.
     {
       "includes": ["apps/web/**"],
       "linter": {
@@ -78,9 +56,15 @@
                     "group": [
                       "@workspace/db",
                       "@workspace/db/**",
-                      "@workspace/api/**"
+                      "@workspace/api/**",
+                      "@workspace/*/router",
+                      "@workspace/*/schema",
+                      "@workspace/kernel/context",
+                      "@workspace/kernel/errors",
+                      "@workspace/kernel/testing",
+                      "@workspace/kernel/trpc"
                     ],
-                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                    "message": "Server-only — apps/web uses module contracts (@workspace/<module>/contract) and reaches the server through tRPC."
                   }
                 ]
               }
@@ -112,9 +96,15 @@
                     "group": [
                       "@workspace/db",
                       "@workspace/db/**",
-                      "@workspace/api/**"
+                      "@workspace/api/**",
+                      "@workspace/*/router",
+                      "@workspace/*/schema",
+                      "@workspace/kernel/context",
+                      "@workspace/kernel/errors",
+                      "@workspace/kernel/testing",
+                      "@workspace/kernel/trpc"
                     ],
-                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                    "message": "Server-only — apps/web uses module contracts (@workspace/<module>/contract) and reaches the server through tRPC."
                   },
                   {
                     "group": [
@@ -154,9 +144,15 @@
                     "group": [
                       "@workspace/db",
                       "@workspace/db/**",
-                      "@workspace/api/**"
+                      "@workspace/api/**",
+                      "@workspace/*/router",
+                      "@workspace/*/schema",
+                      "@workspace/kernel/context",
+                      "@workspace/kernel/errors",
+                      "@workspace/kernel/testing",
+                      "@workspace/kernel/trpc"
                     ],
-                    "message": "Server-only package — apps/web reaches the server through tRPC."
+                    "message": "Server-only — apps/web uses module contracts (@workspace/<module>/contract) and reaches the server through tRPC."
                   },
                   {
                     "group": ["@/features/*/api.ts", "@/features/*/model/**"],
@@ -169,10 +165,104 @@
         }
       }
     },
+    {
+      "includes": ["modules/*/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@workspace/*/router"],
+                    "message": "A module never calls another module's router — use its contract or schema."
+                  },
+                  {
+                    "group": ["@workspace/api", "@workspace/api/**"],
+                    "message": "Modules sit below the composition in @workspace/api."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["modules/*/src/contract.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@workspace/*/router"],
+                    "message": "A module never calls another module's router — use its contract or schema."
+                  },
+                  {
+                    "group": ["@workspace/api", "@workspace/api/**"],
+                    "message": "Modules sit below the composition in @workspace/api."
+                  },
+                  {
+                    "group": [
+                      "drizzle-orm",
+                      "drizzle-orm/**",
+                      "@trpc/server",
+                      "@workspace/db",
+                      "@workspace/db/**",
+                      "@workspace/*/schema",
+                      "@workspace/kernel/context",
+                      "@workspace/kernel/errors",
+                      "@workspace/kernel/testing",
+                      "@workspace/kernel/trpc",
+                      "./schema.js",
+                      "./repo.js",
+                      "./router.js"
+                    ],
+                    "message": "contract.ts ships to the browser — Zod shapes and types only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["modules/*/src/router.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@workspace/*/router"],
+                    "message": "A module never calls another module's router — use its contract or schema."
+                  },
+                  {
+                    "group": ["@workspace/api", "@workspace/api/**"],
+                    "message": "Modules sit below the composition in @workspace/api."
+                  },
+                  {
+                    "group": ["drizzle-orm", "drizzle-orm/**", "./schema.js"],
+                    "message": "Routers reach data only through their module's repo."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     // Drizzle table columns follow domain order (id → fields → timestamps),
     // not alphabetical — disable useSortedKeys for schema files only.
     {
-      "includes": ["packages/db/src/schema/**"],
+      "includes": ["modules/*/src/schema.ts"],
       "assist": {
         "actions": {
           "source": {

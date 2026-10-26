@@ -1,8 +1,7 @@
 import { trpcServer } from "@hono/trpc-server";
-import { appRouter } from "@workspace/api";
-import { createTRPCContext } from "@workspace/api/context";
+import type { AnyTRPCRouter } from "@trpc/server";
 import type { Database } from "@workspace/db";
-import type { AppRepos } from "@workspace/domain";
+import { createTRPCContext } from "@workspace/kernel/context";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -25,11 +24,12 @@ export interface CreateAppOptions {
   corsOrigin?: string;
   db: Database;
   log: Logger;
-  repos: AppRepos;
+  /** `appRouter` from @workspace/api in production; tests pass their own. */
+  router: AnyTRPCRouter;
 }
 
 export function createApp(options: CreateAppOptions) {
-  const { corsOrigin, db, log, repos } = options;
+  const { corsOrigin, db, log, router } = options;
   const app = new Hono<{ Variables: AppVariables }>();
 
   app.use(requestId());
@@ -72,11 +72,11 @@ export function createApp(options: CreateAppOptions) {
       // Adapter types createContext as Record; cast until @hono/trpc-server aligns.
       createContext: (_opts, c) =>
         createTRPCContext({
+          db,
           log: c.get("log"),
-          repos,
           requestId: c.get("requestId"),
         }) as unknown as Record<string, unknown>,
-      router: appRouter,
+      router,
     })
   );
 

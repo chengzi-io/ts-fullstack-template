@@ -1,4 +1,4 @@
-import { listPostsInput } from "@workspace/domain/posts";
+import { listPostsInput } from "@workspace/posts/contract";
 
 import { trpc } from "@/lib/trpc.ts";
 

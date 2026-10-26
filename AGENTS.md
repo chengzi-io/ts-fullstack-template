@@ -14,13 +14,22 @@ Before editing files for a substantial task:
 Package-level rules live in each app/package `AGENTS.md`. This root file is
 **workspace-wide**: layout, dependency red lines, quality gates, and shared style.
 
+**One business capability = one directory**: `modules/<domain>` holds it top to
+bottom; `apps/web/src/features/<domain>` is its UI. Layers live *inside* a module.
+
 ```text
-apps/web          SPA — features, routes, tRPC client
-apps/server       HTTP host — env, createDb, inject repos, mount tRPC
-packages/domain   Contracts — Zod, types, *Repo / AppRepos (no SQL)
-packages/api      tRPC routers + context (thin; uses ctx.repos)
-packages/db       Drizzle schema, repo implementations, createDb
-packages/ui       Shared UI primitives
+modules/<domain>    one capability (demo: authors, posts) — see modules/AGENTS.md
+  src/contract.ts     Zod + types, browser-safe (the web imports this)
+  src/schema.ts       Drizzle tables
+  src/repo.ts         the only code that touches those tables
+  src/router.ts       tRPC procedures, repo on ctx.<domain>
+  test/               router tests on a temp SQLite
+packages/kernel     module SDK: procedures + error mapping, context, errors, pagination, test context
+packages/db         createDb, Executor, FK helper, createTestDb; drizzle config + migrations
+packages/api        composition only: appRouter (one line per module) + AppRouter types
+packages/ui         shared UI primitives
+apps/server         HTTP host — env, createDb, mount appRouter
+apps/web            SPA — features/<domain> mirrors modules/<domain>
 ```
 
 ```mermaid
@@ -28,23 +37,34 @@ flowchart LR
   web["apps/web"]
   server["apps/server"]
   api["packages/api"]
-  domain["packages/domain"]
+  modules["modules/*"]
+  kernel["packages/kernel"]
   db["packages/db"]
 
-  web -->|"Zod / types"| domain
-  web -->|"AppRouter types only"| api
-  api -->|"input/output + AppRepos"| domain
-  db -->|"implements *Repo"| domain
-  server -->|"createRepos(db)"| db
-  server -->|"mount appRouter + inject repos"| api
+  web -->|"AppRouter types"| api
+  web -->|"Zod contracts"| modules
+  server -->|"mount appRouter"| api
+  server -->|"createDb"| db
+  api -->|"one line per module"| modules
+  modules -->|"procedures · errors · pagination"| kernel
+  modules -->|"Executor · FK helper"| db
+  kernel -->|"Database type · test DB"| db
 ```
 
-**Red lines**
+**Red lines** (each is enforced by a tool, not by this text)
 
-- `apps/web` must not import `@workspace/db` or value-import `@workspace/api` root (Biome-enforced)
-- `packages/api` uses `ctx.repos` only — no raw `db` on context
-- Shapes live in `@workspace/domain`; SQL lives in `@workspace/db`
-- Prefer the nearest package `AGENTS.md` when editing that package
+| Rule | Enforced by |
+|------|-------------|
+| Module dependencies point one way (posts → authors) | pnpm — a module resolves only modules in its `package.json` |
+| A module never imports another module's `router` or `@workspace/api` | Biome (`biome.jsonc`) |
+| `contract.ts` stays browser-safe; `router.ts` reaches data only via its repo | Biome |
+| `apps/web` imports module contracts, `kernel/pagination`, ui, and `AppRouter` types only | Biome |
+| Features reach each other only via `api.ts` / `store.ts` | Biome |
+
+**Add a module:** copy `modules/authors` (package.json, tsconfigs, `src/`, `test/`),
+add it to `packages/api` (dependency + one `appRouter` line) and, for UI,
+`apps/web` (dependency + `features/<name>/` + route + nav link). Its tables are
+picked up by the drizzle config and `createTestDb()` automatically.
 
 **Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree  
 **DB (demo / local iterate):** `pnpm db:push` — real migrations after product schema stabilizes

@@ -1,13 +1,12 @@
 import { initTRPC, type TRPC_ERROR_CODE_KEY, TRPCError } from "@trpc/server";
+import superjson from "superjson";
+import { z } from "zod";
+import type { Context } from "./context.js";
 import {
   ConflictError,
   InvalidReferenceError,
   NotFoundError,
-} from "@workspace/domain/errors";
-import superjson from "superjson";
-import { z } from "zod";
-
-import type { Context } from "./context.js";
+} from "./errors.js";
 
 const t = initTRPC.context<Context>().create({
   errorFormatter({ ctx, error, shape }) {

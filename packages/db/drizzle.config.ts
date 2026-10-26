@@ -15,7 +15,8 @@ export default defineConfig({
   },
   dialect: "turso",
   out: "./drizzle",
-  schema: "./src/schema/*.ts",
+  // Each module owns its tables (see src/testing.ts for the same convention).
+  schema: "../../modules/*/src/schema.ts",
   strict: true,
   verbose: true,
 });

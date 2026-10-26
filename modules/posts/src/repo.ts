@@ -1,14 +1,20 @@
-import { InvalidReferenceError, NotFoundError } from "@workspace/domain/errors";
+import { authorsTable } from "@workspace/authors/schema";
+import { type Executor, isForeignKeyViolation } from "@workspace/db";
+import { InvalidReferenceError, NotFoundError } from "@workspace/kernel/errors";
 import {
   paginationOffset,
   toPaginatedResult,
-} from "@workspace/domain/pagination";
-import type { Post, PostsRepo } from "@workspace/domain/posts";
+} from "@workspace/kernel/pagination";
 import { desc, eq } from "drizzle-orm";
 
-import { type Database, isForeignKeyViolation } from "../index.js";
-import { authorsTable } from "../schema/authors.js";
-import { postsTable } from "../schema/posts.js";
+import type {
+  CreatePostInput,
+  ListPostsInput,
+  ListPostsResult,
+  Post,
+  UpdatePostPatch,
+} from "./contract.js";
+import { postsTable } from "./schema.js";
 
 const postSelect = {
   authorId: postsTable.authorId,
@@ -39,7 +45,12 @@ function rejectUnknownAuthor(error: unknown): never {
     : error;
 }
 
-export function createPostsRepo(db: Database): PostsRepo {
+/**
+ * The only code that writes `postsTable` (it joins authors read-only for the
+ * embedded summary). Pass a transaction to join a larger unit of work.
+ */
+export function createPostsRepo(db: Executor) {
+  /** NotFoundError when missing. */
   async function byId(id: number): Promise<Post> {
     const [row] = await db
       .select(postSelect)
@@ -56,7 +67,8 @@ export function createPostsRepo(db: Database): PostsRepo {
   return {
     byId,
 
-    async create(input) {
+    /** InvalidReferenceError for an unknown authorId. */
+    async create(input: CreatePostInput): Promise<Post> {
       const [inserted] = await db
         .insert(postsTable)
         .values({
@@ -69,7 +81,8 @@ export function createPostsRepo(db: Database): PostsRepo {
       return byId(inserted.id);
     },
 
-    async delete(id) {
+    /** NotFoundError when missing. */
+    async delete(id: number): Promise<void> {
       const deleted = await db
         .delete(postsTable)
         .where(eq(postsTable.id, id))
@@ -79,7 +92,7 @@ export function createPostsRepo(db: Database): PostsRepo {
       }
     },
 
-    async list(query) {
+    async list(query: ListPostsInput): Promise<ListPostsResult> {
       const { authorId, page, pageSize } = query;
       const where =
         authorId === undefined ? undefined : eq(postsTable.authorId, authorId);
@@ -99,7 +112,8 @@ export function createPostsRepo(db: Database): PostsRepo {
       return toPaginatedResult(rows.map(toPost), total, page, pageSize);
     },
 
-    async update(id, patch) {
+    /** NotFoundError when missing; InvalidReferenceError for an unknown authorId. */
+    async update(id: number, patch: UpdatePostPatch): Promise<Post> {
       const updated = await db
         .update(postsTable)
         .set(patch)
