@@ -63,11 +63,15 @@ export type UpdatePostPatch = Omit<UpdatePostInput, "id">;
 export type ListPostsInput = z.output<typeof listPostsInput>;
 export type ListPostsResult = z.output<typeof listPostsOutput>;
 
-/** Aligns with tRPC `posts.*`. */
+/** Aligns with tRPC `posts.*`. Throws `@workspace/domain/errors` on expected failures. */
 export interface PostsRepo {
-  byId: (id: number) => Promise<Post | null>;
-  create: (input: CreatePostInput) => Promise<Post | null>;
-  delete: (id: number) => Promise<boolean>;
+  /** NotFoundError when missing. */
+  byId: (id: number) => Promise<Post>;
+  /** InvalidReferenceError for an unknown authorId. */
+  create: (input: CreatePostInput) => Promise<Post>;
+  /** NotFoundError when missing. */
+  delete: (id: number) => Promise<void>;
   list: (query: ListPostsInput) => Promise<ListPostsResult>;
-  update: (id: number, patch: UpdatePostPatch) => Promise<Post | null>;
+  /** NotFoundError when missing; InvalidReferenceError for an unknown authorId. */
+  update: (id: number, patch: UpdatePostPatch) => Promise<Post>;
 }

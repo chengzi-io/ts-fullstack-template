@@ -1,19 +1,15 @@
-import type {
-  AuthorsRepo,
-  CreateAuthorInput,
-  UpdateAuthorPatch,
-} from "@workspace/domain/authors";
+import type { AuthorsRepo } from "@workspace/domain/authors";
+import { ConflictError, NotFoundError } from "@workspace/domain/errors";
 import {
   paginationOffset,
   toPaginatedResult,
 } from "@workspace/domain/pagination";
 import { desc, eq } from "drizzle-orm";
 
-import type { Database } from "../index.js";
+import { type Database, isForeignKeyViolation } from "../index.js";
 import { authorsTable } from "../schema/authors.js";
-import { postsTable } from "../schema/posts.js";
 
-type NewAuthor = typeof authorsTable.$inferInsert;
+const notFound = () => new NotFoundError("Author not found");
 
 export function createAuthorsRepo(db: Database): AuthorsRepo {
   return {
@@ -23,44 +19,35 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
         .from(authorsTable)
         .where(eq(authorsTable.id, id))
         .limit(1);
-      return author ?? null;
+      if (!author) {
+        throw notFound();
+      }
+      return author;
     },
 
     async create(input) {
       const [author] = await db
         .insert(authorsTable)
-        .values(toInsertValues(input))
+        .values({ name: input.name })
         .returning();
-
-      if (!author) {
-        throw new Error("Failed to create author");
-      }
-
       return author;
     },
 
     async delete(id) {
-      const existing = await db
-        .select({ id: authorsTable.id })
-        .from(authorsTable)
+      // Rows that reference the author make the FK restrict the delete; the
+      // database decides, so there is no check-then-delete race.
+      const deleted = await db
+        .delete(authorsTable)
         .where(eq(authorsTable.id, id))
-        .limit(1)
-        .then((rows) => rows[0]);
-
-      if (!existing) {
-        return "not_found";
+        .returning({ id: authorsTable.id })
+        .catch((error: unknown) => {
+          throw isForeignKeyViolation(error)
+            ? new ConflictError("Author is still in use", { cause: error })
+            : error;
+        });
+      if (deleted.length === 0) {
+        throw notFound();
       }
-
-      const postCount = await db.$count(
-        postsTable,
-        eq(postsTable.authorId, id)
-      );
-      if (postCount > 0) {
-        return "has_posts";
-      }
-
-      await db.delete(authorsTable).where(eq(authorsTable.id, id));
-      return "deleted";
     },
 
     async list(query) {
@@ -80,30 +67,15 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
     },
 
     async update(id, patch) {
-      const values = toUpdateValues(patch);
-      if (Object.keys(values).length === 0) {
-        return this.byId(id);
-      }
-
       const [author] = await db
         .update(authorsTable)
-        .set(values)
+        .set(patch)
         .where(eq(authorsTable.id, id))
         .returning();
-
-      return author ?? null;
+      if (!author) {
+        throw notFound();
+      }
+      return author;
     },
   };
-}
-
-function toInsertValues(input: CreateAuthorInput): NewAuthor {
-  return {
-    name: input.name,
-  };
-}
-
-function toUpdateValues(patch: UpdateAuthorPatch): Partial<NewAuthor> {
-  return Object.fromEntries(
-    Object.entries(patch).filter(([, value]) => value !== undefined)
-  ) as Partial<NewAuthor>;
 }

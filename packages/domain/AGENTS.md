@@ -43,6 +43,7 @@ flowchart TB
 src/
   index.ts        AppRepos + type re-exports
   pagination.ts   list input/output helpers
+  errors.ts       NotFoundError · ConflictError · InvalidReferenceError (repos throw, api maps)
   authors.ts      demo
   posts.ts        demo (output includes author summary)
 ```
