@@ -32,6 +32,11 @@ modules/<name>/
   `contract` or `schema` — never its `router`. pnpm refuses an unlisted module,
   which keeps the graph one-directional (posts → authors, never back)
 - Each module has its own `contract.ts`; boundaries above are Biome rules
+- Logging: the kernel logs every procedure call (path, type, status, duration,
+  request id; the root cause on a 500). Add `ctx.log.info({ postId }, "post
+  published")` only for an event that log line cannot explain — ids, never
+  whole inputs or personal data. An audit trail (who changed what) is a table,
+  not a log
 - `authors` and `posts` are the disposable demo (`docs/REMOVE-DEMO.md`)
 
 ## Tests
