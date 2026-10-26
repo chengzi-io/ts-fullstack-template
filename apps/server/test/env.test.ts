@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const INVALID_ENV = /invalid environment variables/i;
 const NEEDS_SINGLE_INSTANCE = /DATABASE_SINGLE_INSTANCE/;
+const DRAIN_TOO_LONG = /SHUTDOWN_DRAIN_MS/;
 
 /** `env.ts` validates `process.env` at import, so each case re-imports it. */
 async function loadEnv(vars: Record<string, string | undefined>) {
@@ -53,6 +54,16 @@ describe("env", () => {
     });
 
     expect(env.DATABASE_SINGLE_INSTANCE).toBe(true);
+  });
+
+  it("refuses a drain that outlasts the shutdown timeout", async () => {
+    await expect(
+      loadEnv({
+        DATABASE_URL: "libsql://app.example.turso.io",
+        SHUTDOWN_DRAIN_MS: "10000",
+        SHUTDOWN_TIMEOUT_MS: "10000",
+      })
+    ).rejects.toThrow(DRAIN_TOO_LONG);
   });
 
   it("accepts a remote libSQL URL and applies defaults", async () => {

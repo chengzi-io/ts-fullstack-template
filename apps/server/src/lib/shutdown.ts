@@ -20,8 +20,15 @@ interface ShutdownTimer {
 export interface CreateShutdownOptions {
   clearTimeout?: (timer: ShutdownTimer) => void;
   closeDatabase: () => void;
+  /**
+   * Time between reporting not-ready and closing HTTP, so a load balancer
+   * stops routing here first. Must be below `timeoutMs`.
+   */
+  drainMs: number;
   exit: (code: number) => void;
   log: ShutdownLogger;
+  /** Flip readiness to not-ready; called once, before draining. */
+  onDrainStart: () => void;
   server: ShutdownServer;
   setTimeout?: (callback: () => void, milliseconds: number) => ShutdownTimer;
   timeoutMs: number;
@@ -40,8 +47,10 @@ export function createShutdown(options: CreateShutdownOptions) {
   const {
     clearTimeout: clearShutdownTimeout = cancelTimeout,
     closeDatabase,
+    drainMs,
     exit,
     log,
+    onDrainStart,
     server,
     setTimeout: setShutdownTimeout = scheduleTimeout,
     timeoutMs,
@@ -58,20 +67,28 @@ export function createShutdown(options: CreateShutdownOptions) {
       return completion;
     }
 
-    log.info({ reason: shutdownReason }, "shutting down");
+    log.info({ drainMs, reason: shutdownReason }, "shutting down");
+    onDrainStart();
 
     completion = new Promise<void>((resolve) => {
       let finished = false;
       let timer: ShutdownTimer | undefined;
+      let drainTimer: ShutdownTimer | undefined;
+
+      const clearTimers = (): void => {
+        for (const pending of [timer, drainTimer]) {
+          if (pending) {
+            clearShutdownTimeout(pending);
+          }
+        }
+      };
 
       const finish = (exitCode: number): void => {
         if (finished) {
           return;
         }
         finished = true;
-        if (timer) {
-          clearShutdownTimeout(timer);
-        }
+        clearTimers();
 
         let finalExitCode = Math.max(exitCode, requestedExitCode);
         try {
@@ -103,16 +120,24 @@ export function createShutdown(options: CreateShutdownOptions) {
       }, timeoutMs);
       timer.unref?.();
 
-      try {
-        server.close((error) => {
-          if (error) {
-            log.error({ err: error }, "HTTP server close failed");
-          }
-          finish(error ? 1 : 0);
-        });
-      } catch (error) {
-        log.error({ err: error }, "HTTP server close failed");
-        finish(1);
+      const closeServer = (): void => {
+        try {
+          server.close((error) => {
+            if (error) {
+              log.error({ err: error }, "HTTP server close failed");
+            }
+            finish(error ? 1 : 0);
+          });
+        } catch (error) {
+          log.error({ err: error }, "HTTP server close failed");
+          finish(1);
+        }
+      };
+
+      if (drainMs > 0) {
+        drainTimer = setShutdownTimeout(closeServer, drainMs);
+      } else {
+        closeServer();
       }
     });
 

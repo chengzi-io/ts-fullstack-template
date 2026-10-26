@@ -17,9 +17,12 @@ const db = createDb({
   authToken: env.DATABASE_AUTH_TOKEN,
   url: env.DATABASE_URL,
 });
+let draining = false;
+
 const app = createApp({
   corsOrigin: env.CORS_ORIGIN,
   db,
+  isDraining: () => draining,
   log,
   router: appRouter,
 });
@@ -41,8 +44,12 @@ const server = serve(
 
 const shutdown = createShutdown({
   closeDatabase: () => db.close(),
+  drainMs: env.SHUTDOWN_DRAIN_MS,
   exit: (code) => process.exit(code),
   log,
+  onDrainStart: () => {
+    draining = true;
+  },
   server,
   timeoutMs: env.SHUTDOWN_TIMEOUT_MS,
 });

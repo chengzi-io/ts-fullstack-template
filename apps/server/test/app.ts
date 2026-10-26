@@ -16,7 +16,10 @@ const testRouter = createTRPCRouter({
   }),
 });
 
-/** Real app on a fresh temp SQLite, no listening port; logs land in `logs`. */
+/**
+ * Real app on a fresh temp SQLite, no listening port; logs land in `logs`.
+ * Set `readiness.draining` to simulate a shutdown in progress.
+ */
 export async function createTestApp() {
   const { db, dispose } = await createTestDb();
   const logs: Record<string, unknown>[] = [];
@@ -24,6 +27,12 @@ export async function createTestApp() {
     { level: "info" },
     { write: (line: string) => logs.push(JSON.parse(line)) }
   );
-  const app = createApp({ db, log, router: testRouter });
-  return { app, db, dispose, logs };
+  const readiness = { draining: false };
+  const app = createApp({
+    db,
+    isDraining: () => readiness.draining,
+    log,
+    router: testRouter,
+  });
+  return { app, db, dispose, logs, readiness };
 }

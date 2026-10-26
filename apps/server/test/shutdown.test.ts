@@ -2,10 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createShutdown } from "../src/lib/shutdown.js";
 
+const TIMEOUT_MS = 1000;
+const DRAIN_MS = 200;
+
 /** Drives shutdown by hand: no real timers, sockets, or process.exit. */
-function createHarness(options: { closeDatabase?: () => void } = {}) {
+function createHarness(
+  options: { closeDatabase?: () => void; drainMs?: number } = {}
+) {
   let finishHttpClose: (error?: Error) => void = () => undefined;
-  let fireTimeout: () => void = () => undefined;
+  const timers = new Map<number, () => void>();
 
   const server = {
     close: vi.fn((callback: (error?: Error) => void) => {
@@ -15,25 +20,29 @@ function createHarness(options: { closeDatabase?: () => void } = {}) {
   };
   const closeDatabase = vi.fn(options.closeDatabase ?? (() => undefined));
   const exit = vi.fn<(code: number) => void>();
+  const onDrainStart = vi.fn();
 
   const shutdown = createShutdown({
     clearTimeout: () => undefined,
     closeDatabase,
+    drainMs: options.drainMs ?? 0,
     exit,
     log: { error: () => undefined, info: () => undefined },
+    onDrainStart,
     server,
-    setTimeout: (callback) => {
-      fireTimeout = callback;
+    setTimeout: (callback, milliseconds) => {
+      timers.set(milliseconds, callback);
       return {};
     },
-    timeoutMs: 1000,
+    timeoutMs: TIMEOUT_MS,
   });
 
   return {
     closeDatabase,
     exit,
     finishHttpClose: (error?: Error) => finishHttpClose(error),
-    fireTimeout: () => fireTimeout(),
+    fireTimer: (milliseconds: number) => timers.get(milliseconds)?.(),
+    onDrainStart,
     server,
     shutdown,
   };
@@ -81,7 +90,7 @@ describe("shutdown", () => {
     const h = createHarness();
 
     const done = h.shutdown({ reason: "SIGTERM" });
-    h.fireTimeout();
+    h.fireTimer(TIMEOUT_MS);
     await done;
     h.finishHttpClose();
 
@@ -113,5 +122,20 @@ describe("shutdown", () => {
     await done;
 
     expect(h.exit.mock.calls).toEqual([[1]]);
+  });
+
+  it("reports not ready, drains, and only then closes HTTP", async () => {
+    const h = createHarness({ drainMs: DRAIN_MS });
+
+    const done = h.shutdown({ reason: "SIGTERM" });
+    expect(h.onDrainStart).toHaveBeenCalledOnce();
+    expect(h.server.close).not.toHaveBeenCalled();
+
+    h.fireTimer(DRAIN_MS);
+    expect(h.server.close).toHaveBeenCalledOnce();
+
+    h.finishHttpClose();
+    await done;
+    expect(h.exit.mock.calls).toEqual([[0]]);
   });
 });

@@ -23,13 +23,15 @@ export type AppVariables = RequestIdVariables & {
 export interface CreateAppOptions {
   corsOrigin?: string;
   db: Database;
+  /** True once shutdown started; `/readyz` then answers 503. */
+  isDraining: () => boolean;
   log: Logger;
   /** `appRouter` from @workspace/api in production; tests pass their own. */
   router: AnyTRPCRouter;
 }
 
 export function createApp(options: CreateAppOptions) {
-  const { corsOrigin, db, log, router } = options;
+  const { corsOrigin, db, isDraining, log, router } = options;
   const app = new Hono<{ Variables: AppVariables }>();
 
   app.use(requestId());
@@ -64,7 +66,7 @@ export function createApp(options: CreateAppOptions) {
     );
   }
 
-  app.route("/", createProbeRoutes(db, log));
+  app.route("/", createProbeRoutes(db, log, isDraining));
 
   app.use(
     "/trpc/*",

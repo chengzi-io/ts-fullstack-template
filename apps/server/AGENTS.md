@@ -63,6 +63,12 @@ tsup.config.ts
 scripts/smoke-build.mjs
 ```
 
+## Shutdown
+
+SIGTERM/SIGINT (or a fatal error) → `/readyz` answers 503 → wait
+`SHUTDOWN_DRAIN_MS` → close HTTP (in-flight requests finish) → close DB → exit.
+`SHUTDOWN_TIMEOUT_MS` force-closes sockets and exits 1 if that stalls.
+
 ## Middleware order
 
 `requestId` → log child + `X-Request-Id` → access log (skip probes) → `secureHeaders` → `bodyLimit` → optional CORS on `/trpc/*` → routes → `notFound` / `onError`
@@ -83,6 +89,8 @@ scripts/smoke-build.mjs
 | `DATABASE_URL` | `packages/db/.env` | required |
 | `DATABASE_AUTH_TOKEN` | `packages/db/.env` | remote only |
 | `PORT`, `CORS_ORIGIN`, `LOG_LEVEL`, timeouts | `apps/server/.env` | optional defaults |
+| `SHUTDOWN_DRAIN_MS` | `apps/server/.env` | not-ready grace before HTTP closes — set to the load balancer's deregistration delay; must be below `SHUTDOWN_TIMEOUT_MS` |
+| `HTTP_KEEP_ALIVE_TIMEOUT_MS` | `apps/server/.env` | must exceed the load balancer's idle timeout (e.g. AWS ALB 60 s), or idle sockets close under it → sporadic 502s |
 | `DATABASE_SINGLE_INSTANCE` | `apps/server/.env` | production refuses a `file:` DB unless `true` (replicas would split the data) |
 
 ## Testing

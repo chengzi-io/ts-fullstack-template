@@ -4,13 +4,23 @@ import { Hono } from "hono";
 
 import type { Logger } from "../lib/logger.js";
 
-/** Liveness `/healthz`, readiness `/readyz` (uses `db.ping()`). */
-export function createProbeRoutes(db: Database, log: Logger) {
+/**
+ * Liveness `/healthz`; readiness `/readyz` — not ready while draining for
+ * shutdown or when `db.ping()` fails.
+ */
+export function createProbeRoutes(
+  db: Database,
+  log: Logger,
+  isDraining: () => boolean
+) {
   const probes = new Hono();
 
   probes.get("/healthz", (c) => c.json({ status: "ok", t: Date.now() }));
 
   probes.get("/readyz", async (c) => {
+    if (isDraining()) {
+      return c.json({ status: "draining", t: Date.now() }, 503);
+    }
     try {
       await db.ping();
       return c.json({ status: "ready", t: Date.now() });
