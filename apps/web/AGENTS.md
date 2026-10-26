@@ -8,7 +8,8 @@ client intent = Zustand, form values = React Hook Form. Workspace map: root `AGE
 - Type-import `AppRouter` / `RouterInputs` / `RouterOutputs` from `@workspace/api` — never value-import the package root
 - Value-import Zod only from `@workspace/domain/*` — never `@workspace/db`
 - A route may import a feature's **`components/*` and `hooks.ts` only**. Never its `api.ts` or `model/*`
-- Features must not import another feature's internals. The one legal cross-feature link is **`api.ts` → another `api.ts`** for shared query keys / invalidation (e.g. authors invalidates the posts list). Do this via the exported `*ListQueryFilter`, never a hand-rolled key
+- Features must not import another feature's internals. The one legal cross-feature link is another feature's **`api.ts` query options** (e.g. posts lists authors for its picker)
+- Never invalidate another feature's keys: every successful mutation invalidates all queries (`lib/query-client.ts`)
 - No barrel files. The folder is the namespace
 
 ## Layer model
@@ -35,7 +36,7 @@ Kebab-case everywhere.
 
 ```text
 features/<domain>/
-  api.ts          tRPC queryOptions + <domain>ListQueryFilter + invalidate<Domain>()  — NO React
+  api.ts          tRPC queryOptions — NO React; what other features may import
   hooks.ts        thin React wrappers over api.ts (use<Domain>Query, use...Mutation)
   model/form.ts   Zod form schema + defaults + UI↔wire mappers (to*Input)
   components/
@@ -45,9 +46,9 @@ features/<domain>/
     create-dialog.tsx
 ```
 
-**Why split `api.ts` from `hooks.ts`:** cache/invalidation strategy is the part
-that grows and needs testing; keeping it React-free makes it unit-testable and
-importable by another feature's `api.ts`. `hooks.ts` stays a trivial wrapper.
+**Why split `api.ts` from `hooks.ts`:** query options are React-free, so loaders
+and other features can reuse them. `hooks.ts` stays a trivial wrapper. Mutation
+hooks carry no `onSuccess` cache code — refresh is global.
 
 ### model/form.ts — the schema seam
 
@@ -70,8 +71,8 @@ export const postFormSchema = createPostInput.pick({ authorId: true, title: true
 | `useState` | page-local (delete confirm, hover, ephemeral toggles) |
 | React Hook Form | form field values — never Zustand |
 
-Never put `posts`/`authors` rows in Zustand. After a mutation, invalidate Query
-and close/resume dialogs via the store.
+Never put `posts`/`authors` rows in Zustand. Mutations refresh the cache
+globally; dialogs close/resume via the store.
 
 Root-mounted dialogs pass `enabled: isOpen` (and edit id) into feature queries so
 closed dialogs don't fetch, and reset mutation error state on close.
