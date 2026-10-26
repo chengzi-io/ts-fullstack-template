@@ -71,13 +71,12 @@ export function createApp(options: CreateAppOptions) {
   app.use(
     "/trpc/*",
     trpcServer({
-      // Adapter types createContext as Record; cast until @hono/trpc-server aligns.
       createContext: (_opts, c) =>
         createTRPCContext({
           db,
           log: c.get("log"),
           requestId: c.get("requestId"),
-        }) as unknown as Record<string, unknown>,
+        }),
       router,
     })
   );
