@@ -54,4 +54,5 @@ The template includes **authors + posts** (FK, join on list, create forms) so th
 
 - [docs/REMOVE-DEMO.md](./docs/REMOVE-DEMO.md) — delete the scaffold domain
 - Package `AGENTS.md` files — boundaries for humans and agents
-- [docs/PRE-PRODUCTION-PLAN.md](./docs/PRE-PRODUCTION-PLAN.md) — hardening backlog
+- [docs/DECISIONS.md](./docs/DECISIONS.md) — why the template is shaped this way, and what is still open
+- [apps/server/README.md](./apps/server/README.md) — production build, env, probes, shutdown
