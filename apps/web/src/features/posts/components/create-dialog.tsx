@@ -151,16 +151,17 @@ export function CreatePostDialog() {
     authors.length > 0 &&
     (!isEdit || postQuery.isSuccess);
 
-  const resetMutations = useCallback(() => {
-    createMutation.reset();
-    updateMutation.reset();
-  }, [createMutation, updateMutation]);
+  // `reset` is stable; the mutation result object is new on every render, so
+  // depending on it re-runs this effect, and reset() re-renders — a loop.
+  const { reset: resetCreate } = createMutation;
+  const { reset: resetUpdate } = updateMutation;
 
   useEffect(() => {
     if (!isOpen) {
-      resetMutations();
+      resetCreate();
+      resetUpdate();
     }
-  }, [isOpen, resetMutations]);
+  }, [isOpen, resetCreate, resetUpdate]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
