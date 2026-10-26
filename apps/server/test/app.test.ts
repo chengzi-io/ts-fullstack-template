@@ -110,9 +110,12 @@ describe("error contract", () => {
     db.close();
 
     const res = await app.request("/trpc/authors.list");
-    const body = await res.json();
+    const text = await res.text();
+    const body = JSON.parse(text);
 
     expect(res.status).toBe(500);
+    expect(text).not.toContain("Failed query");
+    expect(body.error.json.data).not.toHaveProperty("stack");
     expect(body.error.json.message).toBe("Internal server error");
     expect(body.error.json.data).toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
