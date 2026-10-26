@@ -55,6 +55,11 @@ src/
   lib/shutdown.ts       idempotent HTTP → DB close
   middleware/access-log.ts
   routes/probes.ts      /healthz · /readyz
+test/
+  app.ts                createTestApp() → real app on createTestDb(), silent logger
+  app.test.ts           probes · request id · error contract
+  shutdown.test.ts      injected server / DB / exit / timers
+  env.test.ts           fail-fast config
 tsup.config.ts
 scripts/smoke-build.mjs
 ```
@@ -83,7 +88,7 @@ scripts/smoke-build.mjs
 ## Testing
 
 - Prefer `createApp(...)` + `app.request()` — no real listen port
-- Inject silent logger, isolated temp DB, explicit CORS
+- Use `test/app.ts` `createTestApp()` — silent logger, temp DB from `createTestDb()`
 - Shutdown tests inject server/DB/exit/timers — never real `process.exit` in unit tests
 - Do not use developer `.env` or `local.db`
 - `pnpm --filter server test` includes build smoke (`GET /healthz` on `dist`)

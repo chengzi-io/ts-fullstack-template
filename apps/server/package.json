@@ -6,9 +6,9 @@
     "dev": "node --env-file-if-exists=../../packages/db/.env --env-file-if-exists=.env --import tsx --watch src/index.ts",
     "build": "tsup",
     "start": "node --env-file-if-exists=../../packages/db/.env --env-file-if-exists=.env dist/index.js",
-    "test": "vitest run --passWithNoTests && pnpm test:build",
+    "test": "vitest run && pnpm test:build",
     "test:build": "pnpm build && node scripts/smoke-build.mjs",
-    "test:watch": "vitest --passWithNoTests",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
