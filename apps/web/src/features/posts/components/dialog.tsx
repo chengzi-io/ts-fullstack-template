@@ -8,13 +8,9 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { useCallback, useEffect } from "react";
-import { useAuthorsQuery } from "@/features/authors/hooks.ts";
+import { useAuthorActions } from "@/features/authors/store.ts";
 import {
-  useAuthorActions,
-  usePostActions,
-  usePostDialog,
-} from "@/stores/selectors.ts";
-import {
+  useAuthorOptionsQuery,
   useCreatePostMutation,
   usePostQuery,
   useUpdatePostMutation,
@@ -25,6 +21,7 @@ import {
   toCreatePostInput,
   toUpdatePostInput,
 } from "../model/form.ts";
+import { usePostActions, usePostDialog } from "../store.ts";
 import { PostForm } from "./form.tsx";
 
 type Author = RouterOutputs["authors"]["list"]["items"][number];
@@ -123,12 +120,12 @@ function postFormDefaultsFrom(post: Post | undefined): PostFormValues {
 }
 
 /**
- * Controlled by `useUiStore` — mount once near the app root.
+ * Controlled by the posts store; mounted by each route that opens it.
  * Authors/post queries run only while open (and edit id present for byId).
  */
-export function CreatePostDialog() {
+export function PostDialog() {
   const postDialog = usePostDialog();
-  const { close } = usePostActions();
+  const { close, openCreate } = usePostActions();
   const { openCreate: openCreateAuthor } = useAuthorActions();
 
   const isOpen = postDialog.mode !== "closed";
@@ -136,7 +133,7 @@ export function CreatePostDialog() {
   const editId = postDialog.mode === "edit" ? postDialog.id : null;
   const copy = postDialogCopy(isEdit);
 
-  const authorsQuery = useAuthorsQuery({ enabled: isOpen });
+  const authorsQuery = useAuthorOptionsQuery({ enabled: isOpen });
   const postQuery = usePostQuery(editId, { enabled: isOpen && isEdit });
   const createMutation = useCreatePostMutation();
   const updateMutation = useUpdatePostMutation();
@@ -187,8 +184,9 @@ export function CreatePostDialog() {
   );
 
   const handleNeedAuthor = useCallback(() => {
-    openCreateAuthor({ resumeAfterAuthor: "create-post" });
-  }, [openCreateAuthor]);
+    // Reopen once the author exists, in case this dialog closed meanwhile.
+    openCreateAuthor({ onCreated: openCreate });
+  }, [openCreate, openCreateAuthor]);
 
   const defaults = isEdit
     ? postFormDefaultsFrom(postQuery.data)

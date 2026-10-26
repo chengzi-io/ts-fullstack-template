@@ -3,37 +3,40 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { RouterInputs, RouterOutputs } from "@workspace/api";
+import { Profiler } from "react";
 import { expect, it } from "vitest";
 
-import { CreateDialogs } from "@/components/app/create-dialogs.tsx";
 import { queryClient } from "@/lib/query-client.ts";
-import { useUiStore } from "@/stores/index.ts";
+import { Route } from "@/routes/posts/index.tsx";
 
 import { server, trpc } from "./msw.ts";
 
 type Author = RouterOutputs["authors"]["byId"];
 type Post = RouterOutputs["posts"]["byId"];
 
-/** In-memory stand-in for the procedures this flow calls. */
+const IDLE_WINDOW_MS = 100;
+
+/** In-memory stand-in for the procedures the posts page calls. */
 function serveBackend() {
   const authors: Author[] = [];
   const posts: Post[] = [];
+  const page = <T,>(items: T[]) => ({
+    items,
+    page: 1,
+    pageCount: items.length > 0 ? 1 : 0,
+    pageSize: 20,
+    total: items.length,
+  });
 
   server.use(
     trpc({
       "authors.create": (input) => {
         const { name } = input as RouterInputs["authors"]["create"];
         const author = { createdAt: new Date(), id: authors.length + 1, name };
-        authors.push(author);
+        authors.unshift(author);
         return author;
       },
-      "authors.list": () => ({
-        items: authors,
-        page: 1,
-        pageCount: authors.length > 0 ? 1 : 0,
-        pageSize: 20,
-        total: authors.length,
-      }),
+      "authors.list": () => page(authors),
       "posts.create": (input) => {
         const { authorId, body, title } =
           input as RouterInputs["posts"]["create"];
@@ -51,31 +54,45 @@ function serveBackend() {
           title,
           updatedAt: now,
         };
-        posts.push(post);
+        posts.unshift(post);
         return post;
       },
+      "posts.list": () => page(posts),
     })
   );
 
   return { posts };
 }
 
-function renderDialogs() {
+const ignoreCommit = () => undefined;
+
+function renderPostsPage(onCommit: () => void = ignoreCommit) {
+  const PostsPage = Route.options.component;
+  if (!PostsPage) {
+    throw new Error("The /posts route has no component");
+  }
   render(
-    <QueryClientProvider client={queryClient}>
-      <CreateDialogs />
-    </QueryClientProvider>
+    <Profiler id="posts-page" onRender={onCommit}>
+      <QueryClientProvider client={queryClient}>
+        <PostsPage />
+      </QueryClientProvider>
+    </Profiler>
   );
 }
 
-it("resumes post creation after creating the first author", async () => {
+function waitIdle() {
+  return act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, IDLE_WINDOW_MS));
+  });
+}
+
+it("creates the first post, creating its author on the way", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
-  renderDialogs();
+  renderPostsPage();
 
-  act(() => {
-    useUiStore.getState().postActions.openCreate();
-  });
+  await screen.findByText("No posts yet");
+  await user.click(screen.getByRole("button", { name: "New" }));
   await user.click(
     await screen.findByRole("button", { name: "Create author" })
   );
@@ -97,7 +114,25 @@ it("resumes post creation after creating the first author", async () => {
   await waitFor(() => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+  expect(await screen.findByText("Hello")).toBeTruthy();
   expect(backend.posts).toMatchObject([
     { author: { name: "Ada" }, title: "Hello" },
   ]);
+});
+
+// Any idle re-render loop on a page burns CPU without failing anything else.
+it("does not re-render while idle", async () => {
+  serveBackend();
+  let commits = 0;
+  const countCommit = () => {
+    commits += 1;
+  };
+  renderPostsPage(countCommit);
+  await screen.findByText("No posts yet");
+  await waitIdle();
+  const settledCommits = commits;
+
+  await waitIdle();
+
+  expect(commits - settledCommits).toBe(0);
 });

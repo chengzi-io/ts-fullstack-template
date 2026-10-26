@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { useCallback, useEffect } from "react";
-import { useAuthorActions, useAuthorDialog } from "@/stores/selectors.ts";
 import {
   useAuthorQuery,
   useCreateAuthorMutation,
@@ -18,20 +17,15 @@ import {
   toCreateAuthorInput,
   toUpdateAuthorInput,
 } from "../model/form.ts";
+import { useAuthorActions, useAuthorDialog } from "../store.ts";
 import { AuthorForm } from "./form.tsx";
 
-function authorDialogCopy(opts: {
-  isEdit: boolean;
-  resumeAfterAuthor: string | null;
-}): { description: string; submitLabel: string; title: string } {
-  if (opts.resumeAfterAuthor === "create-post") {
-    return {
-      description: "After create, the post dialog will reopen.",
-      submitLabel: "Create author",
-      title: "New author",
-    };
-  }
-  if (opts.isEdit) {
+function authorDialogCopy(isEdit: boolean): {
+  description: string;
+  submitLabel: string;
+  title: string;
+} {
+  if (isEdit) {
     return {
       description: "Update via tRPC authors.update.",
       submitLabel: "Save changes",
@@ -46,19 +40,17 @@ function authorDialogCopy(opts: {
 }
 
 /**
- * Controlled by `useUiStore` — mount once near the app root.
+ * Controlled by the authors store; mounted by each route that opens it.
  * Fetches `byId` only while open + editing; resets mutation errors on close.
  */
-export function CreateAuthorDialog() {
+export function AuthorDialog() {
   const authorDialog = useAuthorDialog();
-  const { close, completeCreate } = useAuthorActions();
+  const { close } = useAuthorActions();
 
   const isOpen = authorDialog.mode !== "closed";
   const isEdit = authorDialog.mode === "edit";
   const editId = authorDialog.mode === "edit" ? authorDialog.id : null;
-  const resumeAfterAuthor =
-    authorDialog.mode === "create" ? authorDialog.resumeAfterAuthor : null;
-  const copy = authorDialogCopy({ isEdit, resumeAfterAuthor });
+  const copy = authorDialogCopy(isEdit);
 
   const authorQuery = useAuthorQuery(editId, { enabled: isOpen && isEdit });
   const createMutation = useCreateAuthorMutation();
@@ -97,10 +89,15 @@ export function CreateAuthorDialog() {
         close();
         return;
       }
-      await createMutation.mutateAsync(toCreateAuthorInput(values));
-      completeCreate();
+      const author = await createMutation.mutateAsync(
+        toCreateAuthorInput(values)
+      );
+      close();
+      if (authorDialog.mode === "create") {
+        authorDialog.onCreated?.(author);
+      }
     },
-    [authorDialog, close, completeCreate, createMutation, updateMutation]
+    [authorDialog, close, createMutation, updateMutation]
   );
 
   const defaults: AuthorFormValues =

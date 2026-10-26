@@ -4,12 +4,13 @@ import { cn } from "@workspace/ui/lib/utils";
 import { useCallback, useState } from "react";
 import { DeleteConfirmDialog } from "@/components/blocks/delete-confirm-dialog.tsx";
 import { PageHeader } from "@/components/blocks/page-header.tsx";
+import { AuthorDialog } from "@/features/authors/components/dialog.tsx";
 import { AuthorsTable } from "@/features/authors/components/table.tsx";
 import {
   useAuthorsQuery,
   useDeleteAuthorMutation,
 } from "@/features/authors/hooks.ts";
-import { useAuthorActions } from "@/stores/selectors.ts";
+import { useAuthorActions } from "@/features/authors/store.ts";
 
 export const Route = createFileRoute("/authors/")({
   component: AuthorsPage,
@@ -119,6 +120,8 @@ function AuthorsPage() {
         open={deleteId !== null}
         title="Delete author?"
       />
+
+      <AuthorDialog />
     </div>
   );
 }

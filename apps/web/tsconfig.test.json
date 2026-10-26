@@ -3,5 +3,6 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo"
   },
-  "include": ["test"]
+  // routeTree.gen.ts registers route paths; tests render route components.
+  "include": ["test", "src/routeTree.gen.ts"]
 }
