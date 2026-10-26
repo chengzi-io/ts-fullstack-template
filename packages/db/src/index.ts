@@ -1,5 +1,5 @@
 import { createClient, LibsqlError } from "@libsql/client";
-import { sql } from "drizzle-orm";
+import { type AnyColumn, type SQL, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 export interface DatabaseConfig {
@@ -60,4 +60,12 @@ export function isForeignKeyViolation(error: unknown): boolean {
     current = current.cause;
   }
   return false;
+}
+
+/**
+ * Case-insensitive "column contains q". `q` is a bound parameter, so `%` and
+ * `_` match literally (no LIKE escaping). SQLite's lower() folds ASCII only.
+ */
+export function containsText(column: AnyColumn, q: string): SQL {
+  return sql`instr(lower(${column}), lower(${q})) > 0`;
 }

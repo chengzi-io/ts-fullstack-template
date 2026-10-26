@@ -1,4 +1,8 @@
-import { type Executor, isForeignKeyViolation } from "@workspace/db";
+import {
+  containsText,
+  type Executor,
+  isForeignKeyViolation,
+} from "@workspace/db";
 import { ConflictError, NotFoundError } from "@workspace/kernel/errors";
 import {
   paginationOffset,
@@ -63,16 +67,18 @@ export function createAuthorsRepo(db: Executor) {
     },
 
     async list(query: ListAuthorsInput): Promise<ListAuthorsResult> {
-      const { page, pageSize } = query;
+      const { page, pageSize, q } = query;
+      const where = q ? containsText(authorsTable.name, q) : undefined;
 
       const [items, total] = await Promise.all([
         db
           .select()
           .from(authorsTable)
+          .where(where)
           .orderBy(desc(authorsTable.createdAt), desc(authorsTable.id))
           .limit(pageSize)
           .offset(paginationOffset(page, pageSize)),
-        db.$count(authorsTable),
+        db.$count(authorsTable, where),
       ]);
 
       return toPaginatedResult(items, total, page, pageSize);

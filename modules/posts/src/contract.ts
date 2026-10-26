@@ -3,7 +3,11 @@ import {
   authorIdSchema,
   authorSummarySchema,
 } from "@workspace/authors/contract";
-import { paginatedOutput, paginationInput } from "@workspace/kernel/pagination";
+import {
+  paginatedOutput,
+  paginationInput,
+  searchQuery,
+} from "@workspace/kernel/pagination";
 import { z } from "zod";
 
 export const postIdSchema = z.number().int().positive("Invalid post id");
@@ -45,6 +49,8 @@ export const updatePostInput = createPostInput
 export const listPostsInput = paginationInput
   .extend({
     authorId: authorIdSchema.optional(),
+    /** Matches the title, body, or author name. */
+    q: searchQuery,
   })
   .prefault({});
 

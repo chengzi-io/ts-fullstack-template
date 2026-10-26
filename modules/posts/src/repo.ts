@@ -1,11 +1,15 @@
 import { authorsTable } from "@workspace/authors/schema";
-import { type Executor, isForeignKeyViolation } from "@workspace/db";
+import {
+  containsText,
+  type Executor,
+  isForeignKeyViolation,
+} from "@workspace/db";
 import { InvalidReferenceError, NotFoundError } from "@workspace/kernel/errors";
 import {
   paginationOffset,
   toPaginatedResult,
 } from "@workspace/kernel/pagination";
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, or } from "drizzle-orm";
 
 import type {
   CreatePostInput,
@@ -93,11 +97,20 @@ export function createPostsRepo(db: Executor) {
     },
 
     async list(query: ListPostsInput): Promise<ListPostsResult> {
-      const { authorId, page, pageSize } = query;
-      const where =
-        authorId === undefined ? undefined : eq(postsTable.authorId, authorId);
+      const { authorId, page, pageSize, q } = query;
+      const where = and(
+        authorId === undefined ? undefined : eq(postsTable.authorId, authorId),
+        q
+          ? or(
+              containsText(postsTable.title, q),
+              containsText(postsTable.body, q),
+              containsText(authorsTable.name, q)
+            )
+          : undefined
+      );
 
-      const [rows, total] = await Promise.all([
+      // The author-name filter needs the join, so the count joins too.
+      const [rows, [{ total }]] = await Promise.all([
         db
           .select(postSelect)
           .from(postsTable)
@@ -106,7 +119,11 @@ export function createPostsRepo(db: Executor) {
           .orderBy(desc(postsTable.createdAt), desc(postsTable.id))
           .limit(pageSize)
           .offset(paginationOffset(page, pageSize)),
-        db.$count(postsTable, where),
+        db
+          .select({ total: count() })
+          .from(postsTable)
+          .innerJoin(authorsTable, eq(postsTable.authorId, authorsTable.id))
+          .where(where),
       ]);
 
       return toPaginatedResult(rows.map(toPost), total, page, pageSize);

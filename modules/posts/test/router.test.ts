@@ -60,6 +60,23 @@ describe("posts", () => {
     ]);
   });
 
+  it("searches titles, bodies, and author names", async () => {
+    const ada = await caller.authors.create({ name: "Ada" });
+    const grace = await caller.authors.create({ name: "Grace" });
+    await caller.posts.create({ authorId: ada.id, title: "Hello" });
+    await caller.posts.create({
+      authorId: grace.id,
+      body: "hello again",
+      title: "World",
+    });
+
+    const byText = await caller.posts.list({ q: "hello" });
+    const byAuthor = await caller.posts.list({ q: "grace" });
+
+    expect(byText.total).toBe(2);
+    expect(byAuthor).toMatchObject({ items: [{ title: "World" }], total: 1 });
+  });
+
   it("updates only the fields it is given", async () => {
     const author = await caller.authors.create({ name: "Ada" });
     const post = await caller.posts.create({
