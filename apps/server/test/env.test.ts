@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const INVALID_ENV = /invalid environment variables/i;
+const NEEDS_SINGLE_INSTANCE = /DATABASE_SINGLE_INSTANCE/;
 
 /** `env.ts` validates `process.env` at import, so each case re-imports it. */
 async function loadEnv(vars: Record<string, string | undefined>) {
@@ -32,6 +33,26 @@ describe("env", () => {
     await expect(
       loadEnv({ DATABASE_URL: "postgres://localhost/app" })
     ).rejects.toThrow(INVALID_ENV);
+  });
+
+  it("refuses a local file database in production", async () => {
+    await expect(
+      loadEnv({
+        DATABASE_SINGLE_INSTANCE: undefined,
+        DATABASE_URL: "file:/var/data/app.db",
+        NODE_ENV: "production",
+      })
+    ).rejects.toThrow(NEEDS_SINGLE_INSTANCE);
+  });
+
+  it("allows a file database in production for a declared single instance", async () => {
+    const env = await loadEnv({
+      DATABASE_SINGLE_INSTANCE: "true",
+      DATABASE_URL: "file:/var/data/app.db",
+      NODE_ENV: "production",
+    });
+
+    expect(env.DATABASE_SINGLE_INSTANCE).toBe(true);
   });
 
   it("accepts a remote libSQL URL and applies defaults", async () => {

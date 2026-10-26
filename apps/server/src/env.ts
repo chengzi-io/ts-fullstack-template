@@ -9,6 +9,8 @@ export const env = createEnv({
   server: {
     CORS_ORIGIN: z.string().min(1).optional(),
     DATABASE_AUTH_TOKEN: z.string().min(1).optional(),
+    /** Set only when exactly one instance will ever run (see below). */
+    DATABASE_SINGLE_INSTANCE: z.stringbool().default(false),
     DATABASE_URL: z
       .string()
       .min(1)
@@ -33,3 +35,16 @@ export const env = createEnv({
     SHUTDOWN_TIMEOUT_MS: positiveInt.default(10_000),
   },
 });
+
+// A `file:` database lives on one machine: with two replicas, each would
+// write its own copy and the data would silently split.
+if (
+  env.NODE_ENV === "production" &&
+  env.DATABASE_URL.startsWith("file:") &&
+  !env.DATABASE_SINGLE_INSTANCE
+) {
+  throw new Error(
+    "DATABASE_URL is a local file in production. Use a shared libsql:/https: " +
+      "database, or set DATABASE_SINGLE_INSTANCE=true if only one instance ever runs."
+  );
+}
