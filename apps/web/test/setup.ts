@@ -8,6 +8,15 @@ import { server } from "./msw.ts";
 // Resets every feature store after each test (see __mocks__/zustand.ts).
 vi.mock("zustand");
 
+// jsdom has no matchMedia; the theme provider reads the system color scheme.
+window.matchMedia = (query: string) =>
+  ({
+    addEventListener: () => undefined,
+    matches: false,
+    media: query,
+    removeEventListener: () => undefined,
+  }) as unknown as MediaQueryList;
+
 beforeAll(() => {
   // A request without a handler fails the test instead of silently hanging.
   server.listen({ onUnhandledFrame: "error" });

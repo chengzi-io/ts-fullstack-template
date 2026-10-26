@@ -1,14 +1,10 @@
 /** Demo — delete with the authors / posts features. */
-import { QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { RouterInputs, RouterOutputs } from "@workspace/api";
-import { Profiler } from "react";
 import { expect, it } from "vitest";
 
-import { queryClient } from "@/lib/query-client.ts";
-import { Route } from "@/routes/posts/index.tsx";
-
+import { renderApp } from "./app.tsx";
 import { server, trpc } from "./msw.ts";
 
 type Author = RouterOutputs["authors"]["byId"];
@@ -20,13 +16,19 @@ const IDLE_WINDOW_MS = 100;
 function serveBackend() {
   const authors: Author[] = [];
   const posts: Post[] = [];
-  const page = <T,>(items: T[]) => ({
-    items,
-    page: 1,
-    pageCount: items.length > 0 ? 1 : 0,
-    pageSize: 20,
-    total: items.length,
-  });
+  const page = <T,>(items: T[], input: unknown) => {
+    const { page: number = 1, pageSize = 20 } = (input ?? {}) as {
+      page?: number;
+      pageSize?: number;
+    };
+    return {
+      items: items.slice((number - 1) * pageSize, number * pageSize),
+      page: number,
+      pageCount: Math.ceil(items.length / pageSize),
+      pageSize,
+      total: items.length,
+    };
+  };
 
   server.use(
     trpc({
@@ -36,7 +38,11 @@ function serveBackend() {
         authors.unshift(author);
         return author;
       },
-      "authors.list": () => page(authors),
+      "authors.list": (input) => page(authors, input),
+      "posts.byId": (input) => {
+        const { id } = input as RouterInputs["posts"]["byId"];
+        return posts.find((post) => post.id === id);
+      },
       "posts.create": (input) => {
         const { authorId, body, title } =
           input as RouterInputs["posts"]["create"];
@@ -57,27 +63,20 @@ function serveBackend() {
         posts.unshift(post);
         return post;
       },
-      "posts.list": () => page(posts),
+      "posts.list": (input) => page(posts, input),
+      "posts.update": (input) => {
+        const { id, ...patch } = input as RouterInputs["posts"]["update"];
+        const post = posts.find((candidate) => candidate.id === id);
+        if (!post) {
+          throw new Error(`Unknown post ${id}`);
+        }
+        Object.assign(post, patch);
+        return post;
+      },
     })
   );
 
-  return { posts };
-}
-
-const ignoreCommit = () => undefined;
-
-function renderPostsPage(onCommit: () => void = ignoreCommit) {
-  const PostsPage = Route.options.component;
-  if (!PostsPage) {
-    throw new Error("The /posts route has no component");
-  }
-  render(
-    <Profiler id="posts-page" onRender={onCommit}>
-      <QueryClientProvider client={queryClient}>
-        <PostsPage />
-      </QueryClientProvider>
-    </Profiler>
-  );
+  return { authors, posts };
 }
 
 function waitIdle() {
@@ -89,7 +88,7 @@ function waitIdle() {
 it("creates the first post, creating its author on the way", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
-  renderPostsPage();
+  renderApp("/posts");
 
   await screen.findByText("No posts yet");
   await user.click(screen.getByRole("button", { name: "New" }));
@@ -127,7 +126,7 @@ it("does not re-render while idle", async () => {
   const countCommit = () => {
     commits += 1;
   };
-  renderPostsPage(countCommit);
+  renderApp("/posts", countCommit);
   await screen.findByText("No posts yet");
   await waitIdle();
   const settledCommits = commits;
@@ -135,4 +134,73 @@ it("does not re-render while idle", async () => {
   await waitIdle();
 
   expect(commits - settledCommits).toBe(0);
+});
+
+it("pages through more posts than fit on one page", async () => {
+  const user = userEvent.setup();
+  const backend = serveBackend();
+  const ada = { createdAt: new Date(), id: 1, name: "Ada" };
+  backend.authors.push(ada);
+  for (let n = 1; n <= 25; n += 1) {
+    const now = new Date();
+    backend.posts.unshift({
+      author: { id: ada.id, name: ada.name },
+      authorId: ada.id,
+      body: null,
+      createdAt: now,
+      id: n,
+      title: `Post ${n}`,
+      updatedAt: now,
+    });
+  }
+  const router = renderApp("/posts");
+
+  expect(await screen.findByText("Post 25")).toBeTruthy();
+  expect(screen.queryByText("Post 5")).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Next page" }));
+
+  expect(await screen.findByText("Post 5")).toBeTruthy();
+  expect(screen.queryByText("Post 25")).toBeNull();
+  expect(router.state.location.search).toMatchObject({ page: 2 });
+});
+
+it("keeps an edited post's author even when it is not among the first authors", async () => {
+  const user = userEvent.setup();
+  const backend = serveBackend();
+  for (let n = 1; n <= 25; n += 1) {
+    backend.authors.unshift({
+      createdAt: new Date(),
+      id: n,
+      name: `Author ${n}`,
+    });
+  }
+  const now = new Date();
+  backend.posts.push({
+    author: { id: 1, name: "Author 1" },
+    authorId: 1,
+    body: null,
+    createdAt: now,
+    id: 1,
+    title: "By the oldest author",
+    updatedAt: now,
+  });
+  renderApp("/posts");
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Actions for By the oldest author",
+    })
+  );
+  await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+  const dialog = await screen.findByRole("dialog", { name: "Edit post" });
+  expect(await within(dialog).findByDisplayValue("Author 1")).toBeTruthy();
+  await user.click(
+    within(dialog).getByRole("button", { name: "Save changes" })
+  );
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  expect(backend.posts[0]).toMatchObject({ authorId: 1 });
 });

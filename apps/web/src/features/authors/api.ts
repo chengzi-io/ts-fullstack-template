@@ -1,4 +1,4 @@
-import { listAuthorsInput } from "@workspace/authors/contract";
+import type { RouterInputs } from "@workspace/api";
 
 import { trpc } from "@/lib/trpc.ts";
 
@@ -8,10 +8,10 @@ import { trpc } from "@/lib/trpc.ts";
  * need no invalidation here: see `lib/query-client.ts`.
  */
 
-export const defaultAuthorsListInput = listAuthorsInput.parse({});
+export type AuthorsListInput = RouterInputs["authors"]["list"];
 
-export function authorsListQueryOptions() {
-  return trpc.authors.list.queryOptions(defaultAuthorsListInput);
+export function authorsListQueryOptions(input: AuthorsListInput) {
+  return trpc.authors.list.queryOptions(input);
 }
 
 export function authorByIdQueryOptions(id: number) {

@@ -1,4 +1,4 @@
-import { listPostsInput } from "@workspace/posts/contract";
+import type { RouterInputs } from "@workspace/api";
 
 import { trpc } from "@/lib/trpc.ts";
 
@@ -7,10 +7,10 @@ import { trpc } from "@/lib/trpc.ts";
  * invalidation here: see `lib/query-client.ts`.
  */
 
-export const defaultPostsListInput = listPostsInput.parse({});
+export type PostsListInput = RouterInputs["posts"]["list"];
 
-export function postsListQueryOptions() {
-  return trpc.posts.list.queryOptions(defaultPostsListInput);
+export function postsListQueryOptions(input: PostsListInput) {
+  return trpc.posts.list.queryOptions(input);
 }
 
 export function postByIdQueryOptions(id: number) {

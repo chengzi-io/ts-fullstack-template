@@ -1,4 +1,5 @@
 import type { RouterOutputs } from "@workspace/api";
+import type { AuthorSummary } from "@workspace/authors/contract";
 import { Button } from "@workspace/ui/components/button";
 import {
   Dialog,
@@ -7,8 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthorActions } from "@/features/authors/store.ts";
+import { useDebouncedValue } from "@/hooks/use-debounced-value.ts";
 import {
   useAuthorOptionsQuery,
   useCreatePostMutation,
@@ -24,7 +26,7 @@ import {
 import { usePostActions, usePostDialog } from "../store.ts";
 import { PostForm } from "./form.tsx";
 
-type Author = RouterOutputs["authors"]["list"]["items"][number];
+const AUTHOR_SEARCH_DEBOUNCE_MS = 300;
 type Post = RouterOutputs["posts"]["byId"];
 
 function postDialogCopy(isEdit: boolean) {
@@ -57,11 +59,13 @@ function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
 }
 
 function PostDialogBody({
+  authorSearch,
   authors,
   busy,
   defaults,
   editId,
   isEdit,
+  onAuthorSearchChange,
   onCancel,
   onNeedAuthor,
   onSubmit,
@@ -70,11 +74,13 @@ function PostDialogBody({
   showForm,
   submitLabel,
 }: {
-  authors: Author[];
+  authorSearch: string;
+  authors: AuthorSummary[];
   busy: boolean;
   defaults: PostFormValues;
   editId: number | null;
   isEdit: boolean;
+  onAuthorSearchChange: (search: string) => void;
   onCancel: () => void;
   onNeedAuthor: () => void;
   onSubmit: (values: PostFormValues) => void | Promise<void>;
@@ -90,10 +96,12 @@ function PostDialogBody({
       ) : null}
       {showForm ? (
         <PostForm
+          authorSearch={authorSearch}
           authors={authors}
           defaultValues={defaults}
           isSubmitting={busy}
           key={isEdit ? `edit-${editId}` : "create"}
+          onAuthorSearchChange={onAuthorSearchChange}
           onCancel={onCancel}
           onSubmit={onSubmit}
           submitLabel={submitLabel}
@@ -133,19 +141,37 @@ export function PostDialog() {
   const editId = postDialog.mode === "edit" ? postDialog.id : null;
   const copy = postDialogCopy(isEdit);
 
-  const authorsQuery = useAuthorOptionsQuery({ enabled: isOpen });
+  const [authorSearch, setAuthorSearch] = useState("");
+  const debouncedAuthorSearch = useDebouncedValue(
+    authorSearch,
+    AUTHOR_SEARCH_DEBOUNCE_MS
+  );
+  const authorsQuery = useAuthorOptionsQuery(debouncedAuthorSearch, {
+    enabled: isOpen,
+  });
   const postQuery = usePostQuery(editId, { enabled: isOpen && isEdit });
   const createMutation = useCreatePostMutation();
   const updateMutation = useUpdatePostMutation();
-  const authors = authorsQuery.data?.items ?? [];
   const busy = createMutation.isPending || updateMutation.isPending;
   const saveError = createMutation.error ?? updateMutation.error ?? null;
 
-  const showEmptyAuthors =
-    !isEdit && authorsQuery.isSuccess && authors.length === 0;
+  const matches = authorsQuery.data?.items;
+  const postAuthor = isEdit ? postQuery.data?.author : undefined;
+  // Editing keeps the post's own author selectable even when a search hides it.
+  const authors = useMemo(() => {
+    const found = matches ?? [];
+    if (!postAuthor || found.some((author) => author.id === postAuthor.id)) {
+      return found;
+    }
+    return [postAuthor, ...found];
+  }, [matches, postAuthor]);
+
+  const noAuthorsAtAll =
+    authorsQuery.isSuccess && authors.length === 0 && !debouncedAuthorSearch;
+  const showEmptyAuthors = !isEdit && noAuthorsAtAll;
   const showForm =
     authorsQuery.isSuccess &&
-    authors.length > 0 &&
+    !noAuthorsAtAll &&
     (!isEdit || postQuery.isSuccess);
 
   // `reset` is stable; the mutation result object is new on every render, so
@@ -157,6 +183,7 @@ export function PostDialog() {
     if (!isOpen) {
       resetCreate();
       resetUpdate();
+      setAuthorSearch("");
     }
   }, [isOpen, resetCreate, resetUpdate]);
 
@@ -211,11 +238,13 @@ export function PostDialog() {
         ) : null}
 
         <PostDialogBody
+          authorSearch={authorSearch}
           authors={authors}
           busy={busy}
           defaults={defaults}
           editId={editId}
           isEdit={isEdit}
+          onAuthorSearchChange={setAuthorSearch}
           onCancel={close}
           onNeedAuthor={handleNeedAuthor}
           onSubmit={handleSubmit}

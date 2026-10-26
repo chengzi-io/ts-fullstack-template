@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { RouterOutputs } from "@workspace/api";
+import type { AuthorSummary } from "@workspace/authors/contract";
 import { Button } from "@workspace/ui/components/button";
 import {
   Field,
@@ -10,7 +10,7 @@ import {
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/utils";
-import { useCallback, useEffect } from "react";
+import { type ChangeEvent, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import {
@@ -19,15 +19,16 @@ import {
   postFormSchema,
 } from "../model/form.ts";
 
-type Author = RouterOutputs["authors"]["list"]["items"][number];
-
 const controlClassName =
   "w-full rounded-2xl border border-transparent bg-input/50 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive";
 
 interface PostFormProps {
-  authors: Author[];
+  authorSearch: string;
+  /** Picker options: search matches (plus the post's own author when editing). */
+  authors: AuthorSummary[];
   defaultValues?: PostFormValues;
   isSubmitting?: boolean;
+  onAuthorSearchChange: (search: string) => void;
   onCancel?: () => void;
   onSubmit: (values: PostFormValues) => void | Promise<void>;
   submitLabel?: string;
@@ -35,8 +36,10 @@ interface PostFormProps {
 
 export function PostForm({
   authors,
+  authorSearch,
   defaultValues = postFormDefaults,
   isSubmitting = false,
+  onAuthorSearchChange,
   onCancel,
   onSubmit,
   submitLabel = "Create post",
@@ -60,12 +63,22 @@ export function PostForm({
     setValue,
   } = form;
 
+  // A native <select> shows its first option when the value is not among the
+  // options, while the form would still submit the old id. Keep them in sync.
   useEffect(() => {
     const [first] = authors;
-    if (first && form.getValues("authorId") <= 0) {
+    const selected = form.getValues("authorId");
+    if (first && !authors.some((author) => author.id === selected)) {
       setValue("authorId", first.id);
     }
   }, [authors, form, setValue]);
+
+  const handleAuthorSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onAuthorSearchChange(event.target.value);
+    },
+    [onAuthorSearchChange]
+  );
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
@@ -96,6 +109,14 @@ export function PostForm({
       <FieldGroup>
         <Field data-invalid={!!errors.authorId}>
           <FieldLabel htmlFor="post-author">Author</FieldLabel>
+          <Input
+            aria-label="Search authors"
+            disabled={busy}
+            onChange={handleAuthorSearchChange}
+            placeholder="Search authors…"
+            type="search"
+            value={authorSearch}
+          />
           <select
             aria-invalid={!!errors.authorId}
             className={cn(controlClassName, "h-8 px-2.5")}
@@ -104,7 +125,7 @@ export function PostForm({
             {...register("authorId", { valueAsNumber: true })}
           >
             {noAuthors ? (
-              <option value={0}>No authors yet</option>
+              <option value={0}>No matching authors</option>
             ) : (
               authors.map((author) => (
                 <option key={author.id} value={author.id}>
@@ -114,7 +135,8 @@ export function PostForm({
             )}
           </select>
           <FieldDescription>
-            Demo: pick an author id. Real apps usually take author from session.
+            Lists the first matches; search to find others. Real apps usually
+            take the author from the session.
           </FieldDescription>
           <FieldError errors={[errors.authorId]} />
         </Field>
@@ -123,7 +145,7 @@ export function PostForm({
           <FieldLabel htmlFor="post-title">Title</FieldLabel>
           <Input
             aria-invalid={!!errors.title}
-            disabled={busy || noAuthors}
+            disabled={busy}
             id="post-title"
             placeholder="e.g. Hello from the template"
             {...register("title")}
@@ -136,7 +158,7 @@ export function PostForm({
           <textarea
             aria-invalid={!!errors.body}
             className={cn(controlClassName, "px-2.5 py-2")}
-            disabled={busy || noAuthors}
+            disabled={busy}
             id="post-body"
             placeholder="Optional"
             rows={4}

@@ -12,8 +12,8 @@ import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 
 import {
+  ColumnHeader,
   createSelectColumn,
-  SortableHeader,
 } from "@/components/blocks/data-table.tsx";
 
 export type Author = RouterOutputs["authors"]["list"]["items"][number];
@@ -85,14 +85,7 @@ export function createAuthorColumns(handlers: {
       cell: ({ row }) => (
         <span className="font-medium">{row.original.name}</span>
       ),
-      filterFn: (row, _id, value: string) => {
-        const q = value.toLowerCase();
-        return (
-          row.original.name.toLowerCase().includes(q) ||
-          String(row.original.id).includes(q)
-        );
-      },
-      header: ({ column }) => <SortableHeader column={column} title="Name" />,
+      header: () => <ColumnHeader title="Name" />,
     },
     {
       accessorKey: "id",
@@ -101,7 +94,7 @@ export function createAuthorColumns(handlers: {
           {row.original.id}
         </span>
       ),
-      header: ({ column }) => <SortableHeader column={column} title="ID" />,
+      header: () => <ColumnHeader title="ID" />,
     },
     {
       accessorKey: "createdAt",
@@ -110,10 +103,7 @@ export function createAuthorColumns(handlers: {
           {row.original.createdAt.toLocaleString()}
         </span>
       ),
-      header: ({ column }) => (
-        <SortableHeader column={column} title="Created" />
-      ),
-      sortingFn: "datetime",
+      header: () => <ColumnHeader title="Created" />,
     },
     {
       cell: ({ row }) => (
@@ -125,7 +115,6 @@ export function createAuthorColumns(handlers: {
         />
       ),
       enableHiding: false,
-      enableSorting: false,
       header: () => <span className="sr-only">Actions</span>,
       id: "actions",
     },

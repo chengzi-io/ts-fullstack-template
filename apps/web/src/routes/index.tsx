@@ -40,7 +40,7 @@ const STACK_GROUPS: StackGroup[] = [
         name: "Zustand",
       },
       {
-        detail: "DataTable · sort · filter · page size",
+        detail: "DataTable · server paging · search in the URL",
         name: "TanStack Table",
       },
       { detail: "Typed RPC to AppRouter", name: "tRPC client" },
