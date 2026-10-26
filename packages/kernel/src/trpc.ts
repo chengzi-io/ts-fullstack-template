@@ -6,6 +6,7 @@ import {
   ConflictError,
   InvalidReferenceError,
   NotFoundError,
+  rootCause,
 } from "./errors.js";
 
 const t = initTRPC.context<Context>().create({
@@ -33,15 +34,6 @@ const t = initTRPC.context<Context>().create({
   isDev: false,
   transformer: superjson,
 });
-
-/** Deepest cause — the driver error names the failure without SQL or params. */
-function rootCause(error: Error): unknown {
-  let current: unknown = error;
-  while (current instanceof Error && current.cause !== undefined) {
-    current = current.cause;
-  }
-  return current;
-}
 
 const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
   const startedAt = Date.now();

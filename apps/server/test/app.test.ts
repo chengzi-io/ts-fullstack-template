@@ -8,9 +8,10 @@ const BODY_LIMIT_BYTES = 1024 * 1024;
 let app: App;
 let db: Awaited<ReturnType<typeof createTestApp>>["db"];
 let dispose: () => Promise<void>;
+let logs: Record<string, unknown>[];
 
 beforeEach(async () => {
-  ({ app, db, dispose } = await createTestApp());
+  ({ app, db, dispose, logs } = await createTestApp());
 });
 
 afterEach(async () => {
@@ -47,6 +48,22 @@ describe("probes", () => {
 
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ status: "not_ready" });
+  });
+
+  it("logs why it is not ready, without SQL", async () => {
+    db.close();
+
+    await app.request("/readyz");
+
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        err: expect.objectContaining({
+          code: "CLIENT_CLOSED",
+          message: expect.not.stringContaining("Failed query"),
+        }),
+        msg: "readiness check failed",
+      })
+    );
   });
 });
 

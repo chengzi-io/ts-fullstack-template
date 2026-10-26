@@ -64,7 +64,7 @@ export function createApp(options: CreateAppOptions) {
     );
   }
 
-  app.route("/", createProbeRoutes(db));
+  app.route("/", createProbeRoutes(db, log));
 
   app.use(
     "/trpc/*",

@@ -7,7 +7,7 @@ no env. Never imports a module: the kernel sits below them.
 |--------|------|---------|
 | `./trpc` | `publicProcedure` / `protectedProcedure`, `createTRPCRouter`, `createCallerFactory`. Maps domain errors → tRPC codes, logs every procedure (driver-level root cause on 500s, never SQL), never sends stacks | modules, api |
 | `./context` | `createTRPCContext({ db, log, requestId, session? })`, `Logger` | server |
-| `./errors` | `NotFoundError` · `ConflictError` · `InvalidReferenceError` | module repos |
+| `./errors` | `NotFoundError` · `ConflictError` · `InvalidReferenceError`; `rootCause(error)` for logs | module repos, server |
 | `./pagination` | `paginationInput`, `paginatedOutput`, `toPaginatedResult` — browser-safe | module contracts |
 | `./testing` | `createTestContext()`, `silentLogger` | module tests |
 
