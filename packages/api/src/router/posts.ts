@@ -1,5 +1,4 @@
 import type { TRPCRouterRecord } from "@trpc/server";
-import { TRPCError } from "@trpc/server";
 import {
   createPostInput,
   deletePostOutput,
@@ -12,41 +11,23 @@ import {
 
 import { publicProcedure } from "../trpc.js";
 
-/** Demo — delete with authors. */
+/** Demo — delete with authors. Repo errors map to tRPC codes in `trpc.ts`. */
 export const postsRouter = {
   byId: publicProcedure
     .input(postIdInput)
     .output(postSchema)
-    .query(async ({ ctx, input }) => {
-      const post = await ctx.repos.posts.byId(input.id);
-      if (!post) {
-        throw notFound();
-      }
-      return post;
-    }),
+    .query(({ ctx, input }) => ctx.repos.posts.byId(input.id)),
 
   create: publicProcedure
     .input(createPostInput)
     .output(postSchema)
-    .mutation(async ({ ctx, input }) => {
-      const post = await ctx.repos.posts.create(input);
-      if (!post) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Author not found",
-        });
-      }
-      return post;
-    }),
+    .mutation(({ ctx, input }) => ctx.repos.posts.create(input)),
 
   delete: publicProcedure
     .input(postIdInput)
     .output(deletePostOutput)
     .mutation(async ({ ctx, input }) => {
-      const deleted = await ctx.repos.posts.delete(input.id);
-      if (!deleted) {
-        throw notFound();
-      }
+      await ctx.repos.posts.delete(input.id);
       return { ok: true } as const;
     }),
 
@@ -58,23 +39,7 @@ export const postsRouter = {
   update: publicProcedure
     .input(updatePostInput)
     .output(postSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...patch } = input;
-      const existing = await ctx.repos.posts.byId(id);
-      if (!existing) {
-        throw notFound();
-      }
-      const post = await ctx.repos.posts.update(id, patch);
-      if (!post) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Author not found",
-        });
-      }
-      return post;
-    }),
+    .mutation(({ ctx, input: { id, ...patch } }) =>
+      ctx.repos.posts.update(id, patch)
+    ),
 } satisfies TRPCRouterRecord;
-
-function notFound(): TRPCError {
-  return new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
-}

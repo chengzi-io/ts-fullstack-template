@@ -1,20 +1,14 @@
+import { InvalidReferenceError, NotFoundError } from "@workspace/domain/errors";
 import {
   paginationOffset,
   toPaginatedResult,
 } from "@workspace/domain/pagination";
-import type {
-  CreatePostInput,
-  Post,
-  PostsRepo,
-  UpdatePostPatch,
-} from "@workspace/domain/posts";
+import type { Post, PostsRepo } from "@workspace/domain/posts";
 import { desc, eq } from "drizzle-orm";
 
-import type { Database } from "../index.js";
+import { type Database, isForeignKeyViolation } from "../index.js";
 import { authorsTable } from "../schema/authors.js";
 import { postsTable } from "../schema/posts.js";
-
-type NewPost = typeof postsTable.$inferInsert;
 
 const postSelect = {
   authorId: postsTable.authorId,
@@ -36,42 +30,43 @@ interface PostRow {
   updatedAt: Date;
 }
 
+const notFound = () => new NotFoundError("Post not found");
+
+/** The FK on authorId is the existence check — no lookup-then-write race. */
+function rejectUnknownAuthor(error: unknown): never {
+  throw isForeignKeyViolation(error)
+    ? new InvalidReferenceError("Author not found", { cause: error })
+    : error;
+}
+
 export function createPostsRepo(db: Database): PostsRepo {
+  async function byId(id: number): Promise<Post> {
+    const [row] = await db
+      .select(postSelect)
+      .from(postsTable)
+      .innerJoin(authorsTable, eq(postsTable.authorId, authorsTable.id))
+      .where(eq(postsTable.id, id))
+      .limit(1);
+    if (!row) {
+      throw notFound();
+    }
+    return toPost(row);
+  }
+
   return {
-    async byId(id) {
-      const [row] = await db
-        .select(postSelect)
-        .from(postsTable)
-        .innerJoin(authorsTable, eq(postsTable.authorId, authorsTable.id))
-        .where(eq(postsTable.id, id))
-        .limit(1);
-      return row ? toPost(row) : null;
-    },
+    byId,
 
     async create(input) {
-      const author = await loadAuthor(db, input.authorId);
-      if (!author) {
-        return null;
-      }
-
       const [inserted] = await db
         .insert(postsTable)
-        .values(toInsertValues(input))
-        .returning();
-
-      if (!inserted) {
-        throw new Error("Failed to create post");
-      }
-
-      return {
-        author: { id: author.id, name: author.name },
-        authorId: inserted.authorId,
-        body: inserted.body,
-        createdAt: inserted.createdAt,
-        id: inserted.id,
-        title: inserted.title,
-        updatedAt: inserted.updatedAt,
-      };
+        .values({
+          authorId: input.authorId,
+          body: input.body ?? null,
+          title: input.title,
+        })
+        .returning({ id: postsTable.id })
+        .catch(rejectUnknownAuthor);
+      return byId(inserted.id);
     },
 
     async delete(id) {
@@ -79,7 +74,9 @@ export function createPostsRepo(db: Database): PostsRepo {
         .delete(postsTable)
         .where(eq(postsTable.id, id))
         .returning({ id: postsTable.id });
-      return deleted.length > 0;
+      if (deleted.length === 0) {
+        throw notFound();
+      }
     },
 
     async list(query) {
@@ -103,40 +100,18 @@ export function createPostsRepo(db: Database): PostsRepo {
     },
 
     async update(id, patch) {
-      if (patch.authorId !== undefined) {
-        const author = await loadAuthor(db, patch.authorId);
-        if (!author) {
-          return null;
-        }
-      }
-
-      const values = toUpdateValues(patch);
-      if (Object.keys(values).length === 0) {
-        return this.byId(id);
-      }
-
-      const [updated] = await db
+      const updated = await db
         .update(postsTable)
-        .set(values)
+        .set(patch)
         .where(eq(postsTable.id, id))
-        .returning({ id: postsTable.id });
-
-      if (!updated) {
-        return null;
+        .returning({ id: postsTable.id })
+        .catch(rejectUnknownAuthor);
+      if (updated.length === 0) {
+        throw notFound();
       }
-
-      return this.byId(id);
+      return byId(id);
     },
   };
-}
-
-function loadAuthor(db: Database, authorId: number) {
-  return db
-    .select({ id: authorsTable.id, name: authorsTable.name })
-    .from(authorsTable)
-    .where(eq(authorsTable.id, authorId))
-    .limit(1)
-    .then((rows) => rows[0]);
 }
 
 function toPost(row: PostRow): Post {
@@ -149,23 +124,4 @@ function toPost(row: PostRow): Post {
     title: row.title,
     updatedAt: row.updatedAt,
   };
-}
-
-function toInsertValues(input: CreatePostInput): NewPost {
-  return {
-    authorId: input.authorId,
-    body: input.body ?? null,
-    title: input.title,
-  };
-}
-
-function toUpdateValues(patch: UpdatePostPatch): Partial<NewPost> {
-  const entries = Object.entries(patch).filter(
-    ([, value]) => value !== undefined
-  );
-  const values = Object.fromEntries(entries) as Partial<NewPost>;
-  if ("body" in values && values.body === undefined) {
-    // keep optional skip
-  }
-  return values;
 }

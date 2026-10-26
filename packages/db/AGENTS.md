@@ -47,7 +47,7 @@ flowchart TB
 
 | Import | File |
 |--------|------|
-| `@workspace/db` | `src/index.ts` — `createDb`, `Database` |
+| `@workspace/db` | `src/index.ts` — `createDb`, `Database`, `isForeignKeyViolation` |
 | `@workspace/db/repos` | `src/repos/index.ts` — `createRepos` |
 | `@workspace/db/schema/<name>` | `src/schema/<name>.ts` |
 | `@workspace/db/testing` | `src/testing.ts` — `createTestDb()` (tests only) |
@@ -86,6 +86,8 @@ drizzle.config.ts    kit (requires DATABASE_URL)
 - One domain (or tight set) per `schema/<name>.ts`
 - Column order: keys → fields → timestamps (not alphabetical)
 - Repos map rows to **domain** shapes (`toPaginatedResult`, joins for nested author)
+- Expected failures are thrown as `@workspace/domain/errors` (`NotFoundError`, `ConflictError`, `InvalidReferenceError`) — never returned as `null` / flags
+- Constraints are the source of truth: write, then translate `isForeignKeyViolation(error)`; no check-then-write lookups (they race)
 - Prefer `$inferInsert` / `$inferSelect` **inside** repos; do not export row types as a second public API next to domain Zod
 
 ### Add a table

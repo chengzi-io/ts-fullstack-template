@@ -18,7 +18,7 @@ Workspace map: root `AGENTS.md`. Shapes / ports: `@workspace/domain`. SQL: `@wor
 - Routers call **`ctx.repos` only** — never put `db` on context
 - `.input()` / `.output()` from `@workspace/domain/*` — do not redefine shapes here
 - Method names match repos (`list`, `byId`, `create`, …)
-- Map repo `null` / `false` → `TRPCError`
+- No error handling in routers: repos throw `@workspace/domain/errors`; `trpc.ts` `domainErrors` maps them (NotFound → NOT_FOUND, Conflict → CONFLICT, InvalidReference → BAD_REQUEST)
 - Prefer `satisfies TRPCRouterRecord`
 - **No** `process.env`, Hono, or React in this package
 - Demo routers `authors` / `posts` are disposable

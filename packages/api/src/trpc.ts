@@ -1,4 +1,9 @@
-import { initTRPC, TRPCError } from "@trpc/server";
+import { initTRPC, type TRPC_ERROR_CODE_KEY, TRPCError } from "@trpc/server";
+import {
+  ConflictError,
+  InvalidReferenceError,
+  NotFoundError,
+} from "@workspace/domain/errors";
 import superjson from "superjson";
 import { z } from "zod";
 
@@ -71,6 +76,32 @@ const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
   return result;
 });
 
+/** Expected repo failures → client-facing codes, in one place. */
+function domainErrorCode(error: unknown): TRPC_ERROR_CODE_KEY | null {
+  if (error instanceof NotFoundError) {
+    return "NOT_FOUND";
+  }
+  if (error instanceof ConflictError) {
+    return "CONFLICT";
+  }
+  if (error instanceof InvalidReferenceError) {
+    return "BAD_REQUEST";
+  }
+  return null;
+}
+
+const domainErrors = t.middleware(async ({ next }) => {
+  const result = await next();
+  if (!result.ok) {
+    const { cause } = result.error;
+    const code = domainErrorCode(cause);
+    if (code && cause instanceof Error) {
+      throw new TRPCError({ cause, code, message: cause.message });
+    }
+  }
+  return result;
+});
+
 const { createCallerFactory, router } = t;
 
 export const createTRPCRouter = router;
@@ -78,7 +109,10 @@ export const createTRPCRouter = router;
 /** In-process / tests — prefer over HTTP. */
 export { createCallerFactory };
 
-export const publicProcedure = t.procedure.use(procedureLogger);
+// The logger wraps domainErrors, so it records the mapped code.
+export const publicProcedure = t.procedure
+  .use(procedureLogger)
+  .use(domainErrors);
 
 /** Requires `ctx.session.user` (host must populate session). */
 export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {

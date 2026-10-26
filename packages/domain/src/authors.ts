@@ -53,12 +53,14 @@ export type UpdateAuthorPatch = Omit<UpdateAuthorInput, "id">;
 export type ListAuthorsInput = z.output<typeof listAuthorsInput>;
 export type ListAuthorsResult = z.output<typeof listAuthorsOutput>;
 
-/** Aligns with tRPC `authors.*`. */
+/** Aligns with tRPC `authors.*`. Throws `@workspace/domain/errors` on expected failures. */
 export interface AuthorsRepo {
-  byId: (id: number) => Promise<Author | null>;
+  /** NotFoundError when missing. */
+  byId: (id: number) => Promise<Author>;
   create: (input: CreateAuthorInput) => Promise<Author>;
-  /** `has_posts` when FK restrict would block delete. */
-  delete: (id: number) => Promise<"deleted" | "not_found" | "has_posts">;
+  /** NotFoundError when missing; ConflictError while other rows reference it. */
+  delete: (id: number) => Promise<void>;
   list: (query: ListAuthorsInput) => Promise<ListAuthorsResult>;
-  update: (id: number, patch: UpdateAuthorPatch) => Promise<Author | null>;
+  /** NotFoundError when missing. */
+  update: (id: number, patch: UpdateAuthorPatch) => Promise<Author>;
 }

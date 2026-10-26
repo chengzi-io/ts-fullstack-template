@@ -1,5 +1,4 @@
 import type { TRPCRouterRecord } from "@trpc/server";
-import { TRPCError } from "@trpc/server";
 import {
   authorIdInput,
   authorSchema,
@@ -12,18 +11,12 @@ import {
 
 import { publicProcedure } from "../trpc.js";
 
-/** Demo — delete with posts. */
+/** Demo — delete with posts. Repo errors map to tRPC codes in `trpc.ts`. */
 export const authorsRouter = {
   byId: publicProcedure
     .input(authorIdInput)
     .output(authorSchema)
-    .query(async ({ ctx, input }) => {
-      const author = await ctx.repos.authors.byId(input.id);
-      if (!author) {
-        throw notFound();
-      }
-      return author;
-    }),
+    .query(({ ctx, input }) => ctx.repos.authors.byId(input.id)),
 
   create: publicProcedure
     .input(createAuthorInput)
@@ -34,16 +27,7 @@ export const authorsRouter = {
     .input(authorIdInput)
     .output(deleteAuthorOutput)
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.repos.authors.delete(input.id);
-      if (result === "not_found") {
-        throw notFound();
-      }
-      if (result === "has_posts") {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Author still has posts",
-        });
-      }
+      await ctx.repos.authors.delete(input.id);
       return { ok: true } as const;
     }),
 
@@ -55,16 +39,7 @@ export const authorsRouter = {
   update: publicProcedure
     .input(updateAuthorInput)
     .output(authorSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...patch } = input;
-      const author = await ctx.repos.authors.update(id, patch);
-      if (!author) {
-        throw notFound();
-      }
-      return author;
-    }),
+    .mutation(({ ctx, input: { id, ...patch } }) =>
+      ctx.repos.authors.update(id, patch)
+    ),
 } satisfies TRPCRouterRecord;
-
-function notFound(): TRPCError {
-  return new TRPCError({ code: "NOT_FOUND", message: "Author not found" });
-}
