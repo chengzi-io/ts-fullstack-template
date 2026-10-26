@@ -8,11 +8,12 @@ const BODY_LIMIT_BYTES = 1024 * 1024;
 let app: App;
 let db: Awaited<ReturnType<typeof createTestApp>>["db"];
 let dispose: () => Promise<void>;
+let lines: string[];
 let logs: Record<string, unknown>[];
 let readiness: { draining: boolean };
 
 beforeEach(async () => {
-  ({ app, db, dispose, logs, readiness } = await createTestApp());
+  ({ app, db, dispose, lines, logs, readiness } = await createTestApp());
 });
 
 afterEach(async () => {
@@ -90,6 +91,20 @@ describe("request id", () => {
     });
 
     expect(res.headers.get("x-request-id")).toBe("edge-123");
+  });
+
+  it("tags a procedure log line with it exactly once", async () => {
+    const res = await postJson(
+      "/trpc/echo",
+      JSON.stringify({ json: { name: "a" } })
+    );
+
+    const line = lines.find((entry) => entry.includes('"msg":"procedure"'));
+    expect(line?.split('"requestId"')).toHaveLength(2);
+    expect(JSON.parse(line ?? "{}")).toMatchObject({
+      path: "echo",
+      requestId: res.headers.get("x-request-id"),
+    });
   });
 });
 

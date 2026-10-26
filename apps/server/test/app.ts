@@ -17,15 +17,22 @@ const testRouter = createTRPCRouter({
 });
 
 /**
- * Real app on a fresh temp SQLite, no listening port; logs land in `logs`.
+ * Real app on a fresh temp SQLite, no listening port; logs land in `logs`
+ * (parsed) and `lines` (raw JSON, where duplicate keys are still visible).
  * Set `readiness.draining` to simulate a shutdown in progress.
  */
 export async function createTestApp() {
   const { db, dispose } = await createTestDb();
+  const lines: string[] = [];
   const logs: Record<string, unknown>[] = [];
   const log = pino(
     { level: "info" },
-    { write: (line: string) => logs.push(JSON.parse(line)) }
+    {
+      write: (line: string) => {
+        lines.push(line);
+        logs.push(JSON.parse(line));
+      },
+    }
   );
   const readiness = { draining: false };
   const app = createApp({
@@ -34,5 +41,5 @@ export async function createTestApp() {
     log,
     router: testRouter,
   });
-  return { app, db, dispose, logs, readiness };
+  return { app, db, dispose, lines, logs, readiness };
 }

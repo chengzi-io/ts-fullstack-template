@@ -38,12 +38,8 @@ const t = initTRPC.context<Context>().create({
 const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
   const startedAt = Date.now();
   const result = await next();
-  const base = {
-    durationMs: Date.now() - startedAt,
-    path,
-    requestId: ctx.requestId,
-    type,
-  };
+  // No requestId: ctx.log is request-scoped and already carries it.
+  const base = { durationMs: Date.now() - startedAt, path, type };
 
   if (result.ok) {
     ctx.log.info({ ...base, status: "ok" }, "procedure");

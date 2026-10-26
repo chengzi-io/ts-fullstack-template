@@ -1,6 +1,9 @@
 import type { Database } from "@workspace/db";
 
-/** Host injects logger (e.g. pino); no pino dependency here. */
+/**
+ * Host injects a request-scoped logger (e.g. a pino child bound to the request
+ * id); no pino dependency here.
+ */
 export interface Logger {
   debug: (obj: object, msg?: string) => void;
   error: (obj: object, msg?: string) => void;
