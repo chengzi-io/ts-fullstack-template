@@ -1,9 +1,9 @@
 import { createTestDb } from "@workspace/db/testing";
 import { createTRPCRouter, publicProcedure } from "@workspace/kernel/trpc";
+import pino from "pino";
 import { z } from "zod";
 
 import { createApp } from "../src/app.js";
-import { createLogger } from "../src/lib/logger.js";
 
 /** Host tests stay independent of business modules. */
 const testRouter = createTRPCRouter({
@@ -16,13 +16,14 @@ const testRouter = createTRPCRouter({
   }),
 });
 
-/** Real app on a fresh temp SQLite, silent logger, no listening port. */
+/** Real app on a fresh temp SQLite, no listening port; logs land in `logs`. */
 export async function createTestApp() {
   const { db, dispose } = await createTestDb();
-  const app = createApp({
-    db,
-    log: createLogger({ level: "silent", nodeEnv: "test" }),
-    router: testRouter,
-  });
-  return { app, db, dispose };
+  const logs: Record<string, unknown>[] = [];
+  const log = pino(
+    { level: "info" },
+    { write: (line: string) => logs.push(JSON.parse(line)) }
+  );
+  const app = createApp({ db, log, router: testRouter });
+  return { app, db, dispose, logs };
 }
