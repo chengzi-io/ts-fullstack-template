@@ -1,5 +1,9 @@
 /** Demo — delete with posts. Browser-safe: Zod shapes and their types only. */
-import { paginatedOutput, paginationInput } from "@workspace/kernel/pagination";
+import {
+  paginatedOutput,
+  paginationInput,
+  searchQuery,
+} from "@workspace/kernel/pagination";
 import { z } from "zod";
 
 export const authorIdSchema = z.number().int().positive("Invalid author id");
@@ -32,7 +36,12 @@ export const updateAuthorInput = createAuthorInput
     { message: "No fields to update" }
   );
 
-export const listAuthorsInput = paginationInput.prefault({});
+export const listAuthorsInput = paginationInput
+  .extend({
+    /** Matches the name. */
+    q: searchQuery,
+  })
+  .prefault({});
 
 export const authorIdInput = z.object({
   id: authorIdSchema,

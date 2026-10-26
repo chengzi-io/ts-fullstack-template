@@ -59,6 +59,25 @@ describe("authors", () => {
     });
   });
 
+  it("filters by a case-insensitive name match", async () => {
+    await caller.authors.create({ name: "Ada Lovelace" });
+    await caller.authors.create({ name: "Grace Hopper" });
+
+    const page = await caller.authors.list({ q: "ADA" });
+
+    expect(page.total).toBe(1);
+    expect(page.items.map((author) => author.name)).toEqual(["Ada Lovelace"]);
+  });
+
+  it("matches % and _ in the query literally", async () => {
+    await caller.authors.create({ name: "100% pure" });
+    await caller.authors.create({ name: "plain" });
+
+    const page = await caller.authors.list({ q: "%" });
+
+    expect(page.items.map((author) => author.name)).toEqual(["100% pure"]);
+  });
+
   it("renames an author", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 

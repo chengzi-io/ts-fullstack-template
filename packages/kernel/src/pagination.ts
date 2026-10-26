@@ -7,6 +7,9 @@ export const paginationInput = z.object({
 
 export type PaginationInput = z.output<typeof paginationInput>;
 
+/** Free-text list filter; absent or empty means "no filter". */
+export const searchQuery = z.string().trim().max(100).optional();
+
 export function paginatedOutput<T extends z.ZodType>(itemSchema: T) {
   return z.object({
     items: z.array(itemSchema),
