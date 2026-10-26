@@ -155,7 +155,8 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 - Vitest is the shared test runner for `apps/server`, `packages/api`, and `packages/db`
 - Test files live under each package's `test/` directory and use `*.test.ts`
-- The template intentionally commits no tests for disposable demo code; empty `test/` directories are framework placeholders
+- Demo code ships with its tests: they are the reference pattern for new tests and are deleted together with the demo (`docs/REMOVE-DEMO.md`)
+- Integration tests get a database from `createTestDb()` (`@workspace/db/testing`): a fresh temp SQLite per test with the current schema — never `local.db` or a remote DB
 - New product behavior and bug fixes must add committed tests; do not use the empty scaffold as a reason to skip coverage
 - Follow the Testing Trophy: prefer integration tests, add unit tests for pure logic, and defer E2E until a real user flow exists
 - Import `describe`, `expect`, `it`, and other APIs explicitly from `vitest`; do not enable globals

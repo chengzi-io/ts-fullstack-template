@@ -30,6 +30,8 @@ packages/db/src/repos/authors.ts
 packages/db/src/repos/posts.ts
 packages/api/src/router/authors.ts
 packages/api/src/router/posts.ts
+packages/api/test/authors.test.ts
+packages/api/test/posts.test.ts
 apps/web/src/features/authors/**
 apps/web/src/features/posts/**
 apps/web/src/routes/posts/**

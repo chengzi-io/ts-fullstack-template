@@ -50,6 +50,7 @@ flowchart TB
 | `@workspace/db` | `src/index.ts` — `createDb`, `Database` |
 | `@workspace/db/repos` | `src/repos/index.ts` — `createRepos` |
 | `@workspace/db/schema/<name>` | `src/schema/<name>.ts` |
+| `@workspace/db/testing` | `src/testing.ts` — `createTestDb()` (tests only) |
 
 ```ts
 import { createDb } from "@workspace/db";
@@ -113,8 +114,8 @@ Demo schema: **push only** — do not commit demo migrations.
 
 ## Testing
 
-- Temp SQLite file per suite; schema via push, not written migrations
-- Cleanup: `close` + delete `.db` / `-wal` / `-shm` (including failure paths)
+- `createTestDb()` gives each test a temp SQLite file with the current schema (`drizzle-kit export`, not migrations)
+- `dispose()` closes the client and deletes the file with `-wal` / `-shm`; it also runs when schema setup fails
 - Do not hit developer `local.db` or remote DBs
 
 ## Commands

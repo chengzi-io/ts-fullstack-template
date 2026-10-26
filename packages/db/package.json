@@ -17,7 +17,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./repos": "./src/repos/index.ts",
-    "./schema/*": "./src/schema/*.ts"
+    "./schema/*": "./src/schema/*.ts",
+    "./testing": "./src/testing.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

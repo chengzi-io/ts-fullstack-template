@@ -23,6 +23,7 @@ Workspace map: root `AGENTS.md`. Shapes / ports: `@workspace/domain`. SQL: `@wor
 - **No** `process.env`, Hono, or React in this package
 - Demo routers `authors` / `posts` are disposable
 - Exports: `.` (router + types), `./context` only
+- `@workspace/db` is a devDependency for tests only; Biome blocks importing it from `src/`
 
 ## This package’s edge
 
@@ -52,6 +53,10 @@ src/
   router/
     authors.ts       demo
     posts.ts         demo
+test/
+  caller.ts          createTestCaller() → real routers + repos on createTestDb()
+  authors.test.ts    demo — reference pattern for router tests
+  posts.test.ts      demo
 ```
 
 ## Add a domain router
@@ -74,5 +79,5 @@ import type { AppRouter, RouterInputs, RouterOutputs } from "@workspace/api";
 
 ```bash
 pnpm --filter @workspace/api typecheck
-# tests: createCaller + real or fake repos
+pnpm --filter @workspace/api test
 ```
