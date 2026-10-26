@@ -24,8 +24,20 @@ const t = initTRPC.context<Context>().create({
           : shape.message,
     };
   },
+  // tRPC otherwise adds `stack` whenever NODE_ENV !== "production"; Drizzle
+  // stacks embed the failed SQL and its params. Causes go to the log instead.
+  isDev: false,
   transformer: superjson,
 });
+
+/** Deepest cause — the driver error names the failure without SQL or params. */
+function rootCause(error: Error): unknown {
+  let current: unknown = error;
+  while (current instanceof Error && current.cause !== undefined) {
+    current = current.cause;
+  }
+  return current;
+}
 
 const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
   const startedAt = Date.now();
@@ -39,10 +51,18 @@ const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
 
   if (result.ok) {
     ctx.log.info({ ...base, status: "ok" }, "procedure");
+  } else if (result.error.code === "INTERNAL_SERVER_ERROR") {
+    ctx.log.error(
+      {
+        ...base,
+        code: result.error.code,
+        err: rootCause(result.error),
+        status: "error",
+      },
+      "procedure failed"
+    );
   } else {
-    const level =
-      result.error.code === "INTERNAL_SERVER_ERROR" ? "error" : "warn";
-    ctx.log[level](
+    ctx.log.warn(
       { ...base, code: result.error.code, status: "error" },
       "procedure failed"
     );

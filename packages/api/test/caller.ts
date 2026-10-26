@@ -14,14 +14,14 @@ const silentLogger: Logger = {
 export type TestCaller = ReturnType<typeof createCaller>;
 
 /** Real routers + real repos on a fresh temp SQLite; call `dispose` after. */
-export async function createTestCaller() {
+export async function createTestCaller(options: { log?: Logger } = {}) {
   const { db, dispose } = await createTestDb();
   const caller = createCaller(
     createTRPCContext({
-      log: silentLogger,
+      log: options.log ?? silentLogger,
       repos: createRepos(db),
       requestId: "test-request",
     })
   );
-  return { caller, dispose };
+  return { caller, db, dispose };
 }
