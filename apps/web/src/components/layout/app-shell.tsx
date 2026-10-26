@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { ThemeToggle } from "@/components/layout/theme-toggle.tsx";
+
 interface AppShellProps {
   children: ReactNode;
 }
@@ -28,9 +30,7 @@ export function AppShell({ children }: AppShellProps) {
               Authors
             </Link>
           </nav>
-          <p className="ml-auto font-mono text-muted-foreground text-xs">
-            Press <kbd className="rounded border px-1">d</kbd> for theme
-          </p>
+          <ThemeToggle />
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">

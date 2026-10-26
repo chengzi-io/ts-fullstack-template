@@ -22,11 +22,13 @@ beforeAll(() => {
   server.listen({ onUnhandledFrame: "error" });
 });
 
-// The query client is an app singleton; clear it per test.
+// The query client is an app singleton and the theme persists to storage;
+// clear both per test.
 afterEach(() => {
   cleanup();
   server.resetHandlers();
   queryClient.clear();
+  localStorage.clear();
 });
 
 afterAll(() => {
