@@ -122,8 +122,10 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
    design system for everyone.
 2. **Forward `className` and merge with `cn()`** on every wrapper so callers can override.
 3. **Compose with slots, not boolean explosions.** `<Dialog><DialogContent>…`
-   beats a `PostDialog` with eight `is*` props. Use Radix `asChild` for
-   polymorphism (button-as-link) instead of duplicating a component.
+   beats a `PostDialog` with eight `is*` props. Primitives are Base UI, not
+   Radix — there is no `asChild`. A link that looks like a button is a `Link`
+   with `buttonVariants()` (see `routes/index.tsx`); a trigger renders your
+   element through `render={<Button … />}` (see `columns.tsx`).
 4. **Controlled dialogs**: `open` + `onOpenChange`; reset the form and mutation
    error when closing.
 5. **Accessibility is required, not optional**: every `DialogContent` has a
