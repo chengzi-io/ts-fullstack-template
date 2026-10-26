@@ -1,19 +1,30 @@
-import type { AuthorsRepo } from "@workspace/domain/authors";
-import { ConflictError, NotFoundError } from "@workspace/domain/errors";
+import { type Executor, isForeignKeyViolation } from "@workspace/db";
+import { ConflictError, NotFoundError } from "@workspace/kernel/errors";
 import {
   paginationOffset,
   toPaginatedResult,
-} from "@workspace/domain/pagination";
+} from "@workspace/kernel/pagination";
 import { desc, eq } from "drizzle-orm";
 
-import { type Database, isForeignKeyViolation } from "../index.js";
-import { authorsTable } from "../schema/authors.js";
+import type {
+  Author,
+  CreateAuthorInput,
+  ListAuthorsInput,
+  ListAuthorsResult,
+  UpdateAuthorPatch,
+} from "./contract.js";
+import { authorsTable } from "./schema.js";
 
 const notFound = () => new NotFoundError("Author not found");
 
-export function createAuthorsRepo(db: Database): AuthorsRepo {
+/**
+ * The only code that touches `authorsTable`. Expected failures are thrown as
+ * `@workspace/kernel/errors`. Pass a transaction to join a larger unit of work.
+ */
+export function createAuthorsRepo(db: Executor) {
   return {
-    async byId(id) {
+    /** NotFoundError when missing. */
+    async byId(id: number): Promise<Author> {
       const [author] = await db
         .select()
         .from(authorsTable)
@@ -25,7 +36,7 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
       return author;
     },
 
-    async create(input) {
+    async create(input: CreateAuthorInput): Promise<Author> {
       const [author] = await db
         .insert(authorsTable)
         .values({ name: input.name })
@@ -33,9 +44,10 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
       return author;
     },
 
-    async delete(id) {
-      // Rows that reference the author make the FK restrict the delete; the
-      // database decides, so there is no check-then-delete race.
+    /** NotFoundError when missing; ConflictError while other rows reference it. */
+    async delete(id: number): Promise<void> {
+      // Referencing rows make the FK restrict the delete; the database
+      // decides, so there is no check-then-delete race.
       const deleted = await db
         .delete(authorsTable)
         .where(eq(authorsTable.id, id))
@@ -50,7 +62,7 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
       }
     },
 
-    async list(query) {
+    async list(query: ListAuthorsInput): Promise<ListAuthorsResult> {
       const { page, pageSize } = query;
 
       const [items, total] = await Promise.all([
@@ -66,7 +78,8 @@ export function createAuthorsRepo(db: Database): AuthorsRepo {
       return toPaginatedResult(items, total, page, pageSize);
     },
 
-    async update(id, patch) {
+    /** NotFoundError when missing. */
+    async update(id: number, patch: UpdateAuthorPatch): Promise<Author> {
       const [author] = await db
         .update(authorsTable)
         .set(patch)

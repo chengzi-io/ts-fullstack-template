@@ -31,6 +31,14 @@ export function createDb(config: DatabaseConfig) {
 
 export type Database = ReturnType<typeof createDb>;
 
+/**
+ * A database or an open transaction. Repo factories take this, so a use case
+ * spanning modules runs atomically: `db.transaction((tx) => …createXRepo(tx)…)`.
+ */
+export type Executor =
+  | Database
+  | Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 const FOREIGN_KEY_FAILED = "FOREIGN KEY constraint failed";
 
 /**

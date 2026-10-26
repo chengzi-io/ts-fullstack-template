@@ -1,72 +1,62 @@
 # Remove the authors / posts demo
 
-The scaffold ships a **disposable** demo domain so the stack is end-to-end
-runnable (Zod contracts, FK join, tRPC, web list/create). It is **not** a
-product starter. Delete it before (or as soon as) you add real tables.
+The scaffold ships a **disposable** demo so the stack is end-to-end runnable
+(Zod contracts, FK join, tRPC, web list/create). It is **not** a product
+starter. Delete it before (or as soon as) you add real modules.
 
 Do **not** generate or commit migrations for this demo. Use `pnpm db:push`
 while evaluating the template. After your real schema is stable, run
 `pnpm db:generate` for the first project migration.
 
+Tip: scaffold your first module by copying `modules/authors` **before**
+deleting the demo (see `modules/AGENTS.md`).
+
 ## What the demo proves
 
-- Shared shapes in `@workspace/domain` (Zod once; types via `z.output`)
-- `authors` + `posts` with `posts.authorId → authors.id` (`onDelete: restrict`)
-- Repo joins so list/detail output includes `author: { id, name }`
-- Invalid `authorId` on create → tRPC `BAD_REQUEST`
-- Thin routers: `.input` / `.output` from domain, `ctx.repos.*` only
-- Web: domain Zod for forms, `RouterOutputs` for table rows
+- One module per capability: `modules/authors`, `modules/posts`
+  (contract → schema → repo → router → tests)
+- `posts.authorId → authors.id` (`onDelete: restrict`); posts depends on
+  authors, never the reverse
+- Constraint-driven errors: unknown author → `BAD_REQUEST`; deleting an author
+  that still has posts → `CONFLICT`
+- A repo join, so post output embeds `author: { id, name }`
+- Web: module contracts for forms, `RouterOutputs` for rows, per-feature
+  stores, and a cross-feature dialog hand-off (`onCreated`)
 
 ## Delete checklist
 
-Remove these files (or equivalent paths if you renamed them):
+Delete:
 
 ```text
-packages/domain/src/authors.ts
-packages/domain/src/posts.ts
-packages/db/src/schema/authors.ts
-packages/db/src/schema/posts.ts
-packages/db/src/repos/authors.ts
-packages/db/src/repos/posts.ts
-packages/api/src/router/authors.ts
-packages/api/src/router/posts.ts
-packages/api/test/authors.test.ts
-packages/api/test/posts.test.ts
+modules/authors/
+modules/posts/
+apps/web/src/features/authors/
+apps/web/src/features/posts/
+apps/web/src/routes/authors/
+apps/web/src/routes/posts/
 apps/web/test/posts-page.test.tsx
-apps/web/src/features/authors/**
-apps/web/src/features/posts/**
-apps/web/src/routes/posts/**
-apps/web/src/routes/authors/**
 ```
 
 Then edit:
 
 | File | Change |
 |------|--------|
-| `packages/domain/package.json` | Drop `./authors` and `./posts` exports |
-| `packages/domain/src/index.ts` | Empty or reshape `AppRepos` for your domains; drop demo type re-exports |
-| `packages/db/src/repos/index.ts` | Register only your repos |
-| `packages/api/src/index.ts` | Mount only your routers (empty object is fine until you add one) |
-| `apps/web` nav / home | Remove Posts / Authors links (`app-shell`, `routes/index`) |
-| Package `AGENTS.md` examples | Stop mentioning authors/posts as required |
+| `packages/api/src/index.ts` | Remove the two module imports and their `appRouter` lines (an empty router is fine) |
+| `packages/api/package.json`, `apps/web/package.json` | Remove `@workspace/authors` and `@workspace/posts` |
+| `apps/web/src/components/layout/app-shell.tsx` | Remove the Posts / Authors nav links |
+| `apps/web/src/routes/index.tsx` | Remove the "Try the demo" card |
+
+Nothing else names the demo: the drizzle config and `createTestDb()` discover
+module schemas by path, and the kernel and server tests use their own routers.
 
 ## After delete
 
 ```bash
-pnpm db:push          # or migrate once you have real migrations
-pnpm typecheck
-pnpm check
-pnpm dev              # should boot with no demo procedures
+pnpm install                        # drop the removed workspace packages
+pnpm --filter web exec vite build   # regenerates src/routeTree.gen.ts
+pnpm typecheck && pnpm check && pnpm test
+pnpm db:push                        # once your first module has tables
 ```
 
-Regenerate the web route tree by running the web dev server or build (TanStack
-Router writes `apps/web/src/routeTree.gen.ts`).
-
-## Add your domain (same pattern)
-
-1. `packages/domain/src/<name>.ts` — Zod + `*Repo` (types from `z.output` only)
-2. `packages/db/src/schema/<name>.ts` + `repos/<name>.ts`
-3. `packages/api/src/router/<name>.ts` — thin procedures
-4. Wire `AppRepos`, `createRepos`, `appRouter`
-5. `apps/web/src/features/<name>/` + routes
-6. When shape is stable: `pnpm db:generate` and commit `packages/db/drizzle/**`
+`vite build` must run before `typecheck`: until TanStack Router regenerates
+`routeTree.gen.ts`, it still imports the deleted routes.

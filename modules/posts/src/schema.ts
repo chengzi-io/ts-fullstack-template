@@ -1,6 +1,5 @@
+import { authorsTable } from "@workspace/authors/schema";
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
-
-import { authorsTable } from "./authors.js";
 
 /** Demo — delete with authors. FK restrict: author with posts cannot be deleted. */
 export const postsTable = sqliteTable("posts", {

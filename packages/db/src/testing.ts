@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +10,8 @@ import { createDb, type Database } from "./index.js";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
+/** Each module keeps its tables in `modules/<name>/src/schema.ts`. */
+const MODULE_SCHEMAS = "../../modules/*/src/schema.ts";
 
 export interface TestDatabase {
   db: Database;
@@ -18,11 +21,28 @@ export interface TestDatabase {
 
 let schemaStatements: Promise<string[]> | undefined;
 
+async function hasModuleSchemas(): Promise<boolean> {
+  const modulesDir = path.join(packageRoot, "../../modules");
+  if (!existsSync(modulesDir)) {
+    return false;
+  }
+  const modules = await readdir(modulesDir, { withFileTypes: true });
+  return modules.some(
+    (entry) =>
+      entry.isDirectory() &&
+      existsSync(path.join(modulesDir, entry.name, "src/schema.ts"))
+  );
+}
+
 /**
- * DDL for the current `src/schema` — `drizzle-kit export` needs neither a
- * config file nor a connection, and the template ships no migrations.
+ * DDL for every module's current schema — `drizzle-kit export` needs neither
+ * a config file nor a connection, and the template ships no migrations.
+ * With no modules (e.g. demo removed) the database is simply empty.
  */
 async function exportSchemaStatements(): Promise<string[]> {
+  if (!(await hasModuleSchemas())) {
+    return [];
+  }
   const { stdout } = await execFileAsync(
     process.execPath,
     [
@@ -31,7 +51,7 @@ async function exportSchemaStatements(): Promise<string[]> {
       "--dialect",
       "turso",
       "--schema",
-      "./src/schema",
+      MODULE_SCHEMAS,
       "--output",
       "json",
     ],

@@ -1,5 +1,5 @@
 import type { RouterInputs } from "@workspace/api";
-import { createAuthorInput } from "@workspace/domain/authors";
+import { createAuthorInput } from "@workspace/authors/contract";
 import type { z } from "zod";
 
 type CreateAuthorInput = RouterInputs["authors"]["create"];

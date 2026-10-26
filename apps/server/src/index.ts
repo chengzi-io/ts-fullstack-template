@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
+import { appRouter } from "@workspace/api";
 import { createDb } from "@workspace/db";
-import { createRepos } from "@workspace/db/repos";
 
 import { createApp } from "./app.js";
 import { env } from "./env.js";
@@ -17,13 +17,11 @@ const db = createDb({
   authToken: env.DATABASE_AUTH_TOKEN,
   url: env.DATABASE_URL,
 });
-const repos = createRepos(db);
-
 const app = createApp({
   corsOrigin: env.CORS_ORIGIN,
   db,
   log,
-  repos,
+  router: appRouter,
 });
 
 const server = serve(

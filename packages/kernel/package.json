@@ -1,24 +1,28 @@
 {
-  "name": "@workspace/domain",
+  "name": "@workspace/kernel",
   "version": "0.0.0",
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest --passWithNoTests",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./authors": "./src/authors.ts",
+    "./context": "./src/context.ts",
     "./errors": "./src/errors.ts",
     "./pagination": "./src/pagination.ts",
-    "./posts": "./src/posts.ts"
+    "./testing": "./src/testing.ts",
+    "./trpc": "./src/trpc.ts"
   },
   "dependencies": {
+    "@trpc/server": "^11.18.0",
+    "@workspace/db": "workspace:*",
+    "superjson": "^2.2.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "typescript": "~6"
   }
 }

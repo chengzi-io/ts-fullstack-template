@@ -1,4 +1,4 @@
-import type { AppRepos } from "@workspace/domain";
+import type { Database } from "@workspace/db";
 
 /** Host injects logger (e.g. pino); no pino dependency here. */
 export interface Logger {
@@ -16,18 +16,18 @@ export interface Session {
 }
 
 /**
- * Inject deps only — no env, no raw `db`.
- * Data access is `repos` (`AppRepos`).
+ * Injected deps only — no env. Each module's procedure middleware builds its
+ * own repo from `db`; routers never query `db` directly.
  */
 export function createTRPCContext(opts: {
+  db: Database;
   log: Logger;
-  repos: AppRepos;
   requestId: string;
   session?: Session | null;
 }) {
   return {
+    db: opts.db,
     log: opts.log,
-    repos: opts.repos,
     requestId: opts.requestId,
     session: opts.session ?? null,
   };
