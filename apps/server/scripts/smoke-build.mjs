@@ -98,6 +98,8 @@ const serverProcess = spawn(
   {
     env: {
       ...process.env,
+      // One process on a temp file database — genuinely single-instance.
+      DATABASE_SINGLE_INSTANCE: "true",
       DATABASE_URL: pathToFileURL(databasePath).href,
       LOG_LEVEL: "error",
       NODE_ENV: "production",

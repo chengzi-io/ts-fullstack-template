@@ -83,6 +83,7 @@ scripts/smoke-build.mjs
 | `DATABASE_URL` | `packages/db/.env` | required |
 | `DATABASE_AUTH_TOKEN` | `packages/db/.env` | remote only |
 | `PORT`, `CORS_ORIGIN`, `LOG_LEVEL`, timeouts | `apps/server/.env` | optional defaults |
+| `DATABASE_SINGLE_INSTANCE` | `apps/server/.env` | production refuses a `file:` DB unless `true` (replicas would split the data) |
 
 ## Testing
 
