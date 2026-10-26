@@ -9,9 +9,10 @@ let app: App;
 let db: Awaited<ReturnType<typeof createTestApp>>["db"];
 let dispose: () => Promise<void>;
 let logs: Record<string, unknown>[];
+let readiness: { draining: boolean };
 
 beforeEach(async () => {
-  ({ app, db, dispose, logs } = await createTestApp());
+  ({ app, db, dispose, logs, readiness } = await createTestApp());
 });
 
 afterEach(async () => {
@@ -48,6 +49,15 @@ describe("probes", () => {
 
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ status: "not_ready" });
+  });
+
+  it("reports not ready while draining for shutdown", async () => {
+    readiness.draining = true;
+
+    const res = await app.request("/readyz");
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ status: "draining" });
   });
 
   it("logs why it is not ready, without SQL", async () => {

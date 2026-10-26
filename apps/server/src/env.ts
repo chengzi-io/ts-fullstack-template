@@ -32,6 +32,8 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+    /** Not-ready grace before closing HTTP; set to the LB's deregistration delay. */
+    SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(0),
     SHUTDOWN_TIMEOUT_MS: positiveInt.default(10_000),
   },
 });
@@ -46,5 +48,12 @@ if (
   throw new Error(
     "DATABASE_URL is a local file in production. Use a shared libsql:/https: " +
       "database, or set DATABASE_SINGLE_INSTANCE=true if only one instance ever runs."
+  );
+}
+
+// The forced-exit timer starts with shutdown, so it must outlast the drain.
+if (env.SHUTDOWN_DRAIN_MS >= env.SHUTDOWN_TIMEOUT_MS) {
+  throw new Error(
+    "SHUTDOWN_DRAIN_MS must be lower than SHUTDOWN_TIMEOUT_MS, or the forced exit fires before HTTP even closes."
   );
 }
