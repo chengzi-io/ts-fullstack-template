@@ -1,8 +1,3 @@
-/**
- * Frontend env — Vite only exposes import.meta.env.VITE_*.
- * Keep validation light; do not pull Node envalid into the browser bundle.
- */
-
 const TRAILING_SLASH = /\/$/;
 
 function readTrpcUrl(): string {

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { buttonVariants } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
-import { PageHeader } from "@/components/layout/page-header.tsx";
+import { PageHeader } from "@/components/blocks/page-header.tsx";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -35,8 +35,14 @@ const STACK_GROUPS: StackGroup[] = [
       { detail: "Dev server & bundler", name: "Vite" },
       { detail: "File-based routes", name: "TanStack Router" },
       { detail: "Server state", name: "TanStack Query" },
-      { detail: "Headless tables", name: "TanStack Table" },
-      { detail: "Long lists", name: "TanStack Virtual" },
+      {
+        detail: "Client UI intent (create/edit dialogs · resume)",
+        name: "Zustand",
+      },
+      {
+        detail: "DataTable · sort · filter · page size",
+        name: "TanStack Table",
+      },
       { detail: "Typed RPC to AppRouter", name: "tRPC client" },
       { detail: "Forms + validation UX", name: "React Hook Form" },
       { detail: "Schemas shared with the API", name: "Zod" },
@@ -66,16 +72,17 @@ const STACK_GROUPS: StackGroup[] = [
     title: "API & data",
   },
   {
-    description: "Format, lint, hooks, and tests.",
+    description:
+      "Format, lint, hooks, and tests (planned items land as product hardens).",
     items: [
       { detail: "Biome preset", name: "Ultracite" },
       { detail: "Pre-commit fix", name: "Lefthook" },
       { detail: "Unit & integration", name: "Vitest" },
-      { detail: "Component tests", name: "Testing Library" },
-      { detail: "DOM environment", name: "jsdom" },
-      { detail: "API mocks · parallel FE/BE", name: "MSW" },
-      { detail: "End-to-end", name: "Playwright" },
-      { detail: "Accessibility in E2E", name: "axe-core" },
+      { detail: "Component tests · planned", name: "Testing Library" },
+      { detail: "DOM environment · planned", name: "jsdom" },
+      { detail: "API mocks · planned", name: "MSW" },
+      { detail: "End-to-end · planned", name: "Playwright" },
+      { detail: "A11y in E2E · planned", name: "axe-core" },
     ],
     title: "Quality",
   },
@@ -95,20 +102,29 @@ function HomePage() {
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-6">
         <PageHeader
-          description="A TypeScript full-stack monorepo template: typed RPC, feature-based UI, shared design system, and a demo that exercises routing, server state, tables, and forms."
+          description="A TypeScript full-stack monorepo template: typed RPC, feature-based UI, shared design system, and a disposable authors/posts demo (FK, dialogs, Zustand UI store)."
           title="Full-stack TypeScript template"
         />
 
         <div className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/30 px-5 py-6">
           <h2 className="font-medium text-sm">Try the demo</h2>
           <p className="max-w-prose text-muted-foreground text-sm leading-relaxed">
-            Todos is the product surface for the stack — file routes and header
-            navigation, list queries with TanStack Table, and a create form with
-            React Hook Form and Zod against the tRPC API.
+            Authors and posts: domain Zod, FK joins, tRPC + Query, create
+            Dialogs, and Zustand for client UI intent (e.g. resume post create
+            after author create). Server data stays in Query — not in the store.
           </p>
-          <div>
-            <Link className={cn(buttonVariants(), "inline-flex")} to="/todos">
-              Go to Todos
+          <div className="flex flex-wrap gap-2">
+            <Link className={cn(buttonVariants(), "inline-flex")} to="/posts">
+              Go to Posts
+            </Link>
+            <Link
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "inline-flex"
+              )}
+              to="/authors"
+            >
+              Authors
             </Link>
           </div>
         </div>

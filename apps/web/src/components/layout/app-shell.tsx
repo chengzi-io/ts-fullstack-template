@@ -17,15 +17,15 @@ export function AppShell({ children }: AppShellProps) {
     <div className="flex min-h-svh flex-col">
       <header className="border-border border-b">
         <div className="mx-auto flex h-12 w-full max-w-5xl items-center gap-6 px-4">
-          <Link className="font-medium text-sm" to="/">
-            Workspace
-          </Link>
           <nav aria-label="Primary" className="flex items-center gap-1 text-sm">
             <Link className={navLinkClass} to="/">
               Home
             </Link>
-            <Link className={navLinkClass} to="/todos">
-              Todos
+            <Link className={navLinkClass} to="/posts">
+              Posts
+            </Link>
+            <Link className={navLinkClass} to="/authors">
+              Authors
             </Link>
           </nav>
           <p className="ml-auto font-mono text-muted-foreground text-xs">
