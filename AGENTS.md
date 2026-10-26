@@ -46,7 +46,7 @@ flowchart LR
 - Shapes live in `@workspace/domain`; SQL lives in `@workspace/db`
 - Prefer the nearest package `AGENTS.md` when editing that package
 
-**Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test`  
+**Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree  
 **DB (demo / local iterate):** `pnpm db:push` — real migrations after product schema stabilizes
 
 # Ultracite Code Standards

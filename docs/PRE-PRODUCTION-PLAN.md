@@ -388,11 +388,11 @@ pnpm --filter server build
 
 **验收标准：**
 
-- [ ] CI 使用锁定的 pnpm 版本和 `--frozen-lockfile`。
-- [ ] CI 运行 `check`、`typecheck`、`test`、`build`。
+- [x] CI 使用锁定的 pnpm 版本和 `--frozen-lockfile`。
+- [x] CI 运行 `check`、`typecheck`、`test`、`build`。
 - [x] 构建后的 Server 可由 `node apps/server/dist/index.js` 直接启动，不依赖 `tsx` 或 workspace TypeScript 源码。
-- [ ] tRPC/DB 测试使用临时 DB，不访问开发或远程数据库。
-- [ ] CI 结束时 `packages/db/drizzle` 仍只有 `.gitkeep`。
+- [x] tRPC/DB 测试使用临时 DB，不访问开发或远程数据库。
+- [x] CI 结束时 `packages/db/drizzle` 仍只有 `.gitkeep`。
 
 
 **验证：**
