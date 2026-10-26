@@ -11,7 +11,7 @@ export interface DatabaseConfig {
 /** Hosts pass validated config — does not read `process.env`. */
 export function createDb(config: DatabaseConfig) {
   const client = createClient({
-    authToken: config.authToken?.trim(),
+    authToken: config.authToken?.trim() || undefined,
     url: config.url.trim(),
   });
   const database = drizzle({ client });
