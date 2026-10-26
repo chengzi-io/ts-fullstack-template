@@ -1,13 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { trpc } from "@/lib/trpc.ts";
 
-import {
-  authorByIdQueryKey,
-  authorByIdQueryOptions,
-  authorsListQueryOptions,
-  invalidateAuthors,
-} from "./api.ts";
+import { authorByIdQueryOptions, authorsListQueryOptions } from "./api.ts";
 
 export function useAuthorsQuery(options?: { enabled?: boolean }) {
   return useQuery({
@@ -27,37 +22,15 @@ export function useAuthorQuery(
   });
 }
 
+// Cache refresh after success is global — see `lib/query-client.ts`.
 export function useCreateAuthorMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.authors.create.mutationOptions({
-      onSuccess: async () => {
-        await invalidateAuthors(queryClient);
-      },
-    })
-  );
+  return useMutation(trpc.authors.create.mutationOptions());
 }
 
 export function useUpdateAuthorMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.authors.update.mutationOptions({
-      onSuccess: async (author) => {
-        queryClient.setQueryData(authorByIdQueryKey(author.id), author);
-        await invalidateAuthors(queryClient, author.id);
-      },
-    })
-  );
+  return useMutation(trpc.authors.update.mutationOptions());
 }
 
 export function useDeleteAuthorMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.authors.delete.mutationOptions({
-      onSuccess: async (_data, input) => {
-        queryClient.removeQueries({ queryKey: authorByIdQueryKey(input.id) });
-        await invalidateAuthors(queryClient);
-      },
-    })
-  );
+  return useMutation(trpc.authors.delete.mutationOptions());
 }

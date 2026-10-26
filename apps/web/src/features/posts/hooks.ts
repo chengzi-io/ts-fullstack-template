@@ -1,13 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { trpc } from "@/lib/trpc.ts";
 
-import {
-  invalidatePosts,
-  postByIdQueryKey,
-  postByIdQueryOptions,
-  postsListQueryOptions,
-} from "./api.ts";
+import { postByIdQueryOptions, postsListQueryOptions } from "./api.ts";
 
 export function usePostsQuery(options?: { enabled?: boolean }) {
   return useQuery({
@@ -27,37 +22,15 @@ export function usePostQuery(
   });
 }
 
+// Cache refresh after success is global — see `lib/query-client.ts`.
 export function useCreatePostMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.posts.create.mutationOptions({
-      onSuccess: async () => {
-        await invalidatePosts(queryClient);
-      },
-    })
-  );
+  return useMutation(trpc.posts.create.mutationOptions());
 }
 
 export function useUpdatePostMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.posts.update.mutationOptions({
-      onSuccess: async (post) => {
-        queryClient.setQueryData(postByIdQueryKey(post.id), post);
-        await invalidatePosts(queryClient, post.id);
-      },
-    })
-  );
+  return useMutation(trpc.posts.update.mutationOptions());
 }
 
 export function useDeletePostMutation() {
-  const queryClient = useQueryClient();
-  return useMutation(
-    trpc.posts.delete.mutationOptions({
-      onSuccess: async (_data, input) => {
-        queryClient.removeQueries({ queryKey: postByIdQueryKey(input.id) });
-        await invalidatePosts(queryClient);
-      },
-    })
-  );
+  return useMutation(trpc.posts.delete.mutationOptions());
 }
