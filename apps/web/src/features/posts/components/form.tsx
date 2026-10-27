@@ -2,6 +2,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { AuthorSummary } from "@workspace/authors/contract";
 import { Button } from "@workspace/ui/components/button";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@workspace/ui/components/combobox";
+import {
   Field,
   FieldDescription,
   FieldError,
@@ -10,8 +18,8 @@ import {
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
 import { cn } from "@workspace/ui/lib/utils";
-import { type ChangeEvent, useCallback, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useCallback, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 
 import {
   type PostFormValues,
@@ -22,8 +30,87 @@ import {
 const controlClassName =
   "w-full rounded-2xl border border-transparent bg-input/50 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive";
 
+interface AuthorComboboxProps {
+  authors: AuthorSummary[];
+  disabled: boolean;
+  invalid: boolean;
+  onSearchChange: (search: string) => void;
+  onSelectId: (authorId: number) => void;
+  value: number;
+}
+
+const authorLabel = (author: AuthorSummary) => author.name;
+const isSameAuthor = (item: AuthorSummary, value: AuthorSummary) =>
+  item.id === value.id;
+
+function AuthorCombobox({
+  authors,
+  disabled,
+  invalid,
+  onSearchChange,
+  onSelectId,
+  value,
+}: AuthorComboboxProps) {
+  const [picked, setPicked] = useState<AuthorSummary | null>(
+    () => authors.find((author) => author.id === value) ?? null
+  );
+  // Matches change under the user's typing; only a pick (or the form changing
+  // the id) may change the selection, so keep the picked author object.
+  const selected =
+    picked?.id === value
+      ? picked
+      : (authors.find((author) => author.id === value) ?? null);
+
+  const handleInputValueChange = useCallback(
+    (next: string, details: { reason: string }) => {
+      // Picking an item fills the input with its name; that is not the user
+      // typing, so it must not search the server.
+      if (details.reason !== "item-press" && details.reason !== "none") {
+        onSearchChange(next);
+      }
+    },
+    [onSearchChange]
+  );
+
+  const handleValueChange = useCallback(
+    (author: AuthorSummary | null) => {
+      setPicked(author);
+      onSelectId(author?.id ?? 0);
+    },
+    [onSelectId]
+  );
+
+  return (
+    <Combobox
+      filter={null}
+      isItemEqualToValue={isSameAuthor}
+      items={authors}
+      itemToStringLabel={authorLabel}
+      onInputValueChange={handleInputValueChange}
+      onValueChange={handleValueChange}
+      value={selected}
+    >
+      <ComboboxInput
+        aria-invalid={invalid}
+        disabled={disabled}
+        id="post-author"
+        placeholder="Search authors…"
+      />
+      <ComboboxContent>
+        <ComboboxList>
+          {(author: AuthorSummary) => (
+            <ComboboxItem key={author.id} value={author}>
+              {author.name}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+        <ComboboxEmpty>No matching authors</ComboboxEmpty>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
+
 interface PostFormProps {
-  authorSearch: string;
   /** Picker options: search matches (plus the post's own author when editing). */
   authors: AuthorSummary[];
   defaultValues?: PostFormValues;
@@ -36,7 +123,6 @@ interface PostFormProps {
 
 export function PostForm({
   authors,
-  authorSearch,
   defaultValues = postFormDefaults,
   isSubmitting = false,
   onAuthorSearchChange,
@@ -45,13 +131,7 @@ export function PostForm({
   submitLabel = "Create post",
 }: PostFormProps) {
   const form = useForm<PostFormValues>({
-    defaultValues: {
-      ...defaultValues,
-      authorId:
-        defaultValues.authorId > 0
-          ? defaultValues.authorId
-          : (authors[0]?.id ?? 0),
-    },
+    defaultValues,
     resolver: zodResolver(postFormSchema),
   });
 
@@ -60,83 +140,53 @@ export function PostForm({
     formState: { errors },
     register,
     reset,
-    setValue,
   } = form;
-
-  // A native <select> shows its first option when the value is not among the
-  // options, while the form would still submit the old id. Keep them in sync.
-  useEffect(() => {
-    const [first] = authors;
-    const selected = form.getValues("authorId");
-    if (first && !authors.some((author) => author.id === selected)) {
-      setValue("authorId", first.id);
-    }
-  }, [authors, form, setValue]);
-
-  const handleAuthorSearchChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onAuthorSearchChange(event.target.value);
-    },
-    [onAuthorSearchChange]
-  );
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
       await onSubmit(values);
-      reset({
-        ...postFormDefaults,
-        authorId: authors[0]?.id ?? 0,
-      });
+      reset(postFormDefaults);
     } catch {
       // Keep values; parent surfaces failure.
     }
   });
 
   const handleReset = useCallback(() => {
-    reset({
-      ...defaultValues,
-      authorId:
-        defaultValues.authorId > 0
-          ? defaultValues.authorId
-          : (authors[0]?.id ?? 0),
-    });
-  }, [authors, defaultValues, reset]);
+    reset(defaultValues);
+  }, [defaultValues, reset]);
 
-  const noAuthors = authors.length === 0;
+  const authorInvalid = !!errors.authorId;
+  const renderAuthor = useCallback(
+    ({
+      field,
+    }: {
+      field: { onChange: (id: number) => void; value: number };
+    }) => (
+      <AuthorCombobox
+        authors={authors}
+        disabled={busy}
+        invalid={authorInvalid}
+        onSearchChange={onAuthorSearchChange}
+        onSelectId={field.onChange}
+        value={field.value}
+      />
+    ),
+    [authors, authorInvalid, busy, onAuthorSearchChange]
+  );
 
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit}>
       <FieldGroup>
         <Field data-invalid={!!errors.authorId}>
           <FieldLabel htmlFor="post-author">Author</FieldLabel>
-          <Input
-            aria-label="Search authors"
-            disabled={busy}
-            onChange={handleAuthorSearchChange}
-            placeholder="Search authors…"
-            type="search"
-            value={authorSearch}
+          <Controller
+            control={form.control}
+            name="authorId"
+            render={renderAuthor}
           />
-          <select
-            aria-invalid={!!errors.authorId}
-            className={cn(controlClassName, "h-8 px-2.5")}
-            disabled={busy || noAuthors}
-            id="post-author"
-            {...register("authorId", { valueAsNumber: true })}
-          >
-            {noAuthors ? (
-              <option value={0}>No matching authors</option>
-            ) : (
-              authors.map((author) => (
-                <option key={author.id} value={author.id}>
-                  {author.name}
-                </option>
-              ))
-            )}
-          </select>
           <FieldDescription>
-            Lists the first matches; search to find others. Real apps usually
-            take the author from the session.
+            Type to search all authors. Real apps usually take the author from
+            the session.
           </FieldDescription>
           <FieldError errors={[errors.authorId]} />
         </Field>
@@ -170,7 +220,7 @@ export function PostForm({
       </FieldGroup>
 
       <div className="flex flex-wrap gap-2">
-        <Button aria-busy={busy} disabled={busy || noAuthors} type="submit">
+        <Button aria-busy={busy} disabled={busy} type="submit">
           {submitLabel}
         </Button>
         <Button

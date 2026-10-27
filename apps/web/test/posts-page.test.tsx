@@ -1,5 +1,6 @@
 /** Demo — delete with the authors / posts features. */
 import { act, screen, waitFor, within } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import type { RouterInputs, RouterOutputs } from "@workspace/api";
 import { expect, it } from "vitest";
@@ -38,7 +39,16 @@ function serveBackend() {
         authors.unshift(author);
         return author;
       },
-      "authors.list": (input) => page(authors, input),
+      "authors.list": (input) => {
+        const { q } = (input ?? {}) as { q?: string };
+        const needle = q?.toLowerCase() ?? "";
+        const matches = needle
+          ? authors.filter((author) =>
+              author.name.toLowerCase().includes(needle)
+            )
+          : authors;
+        return page(matches, input);
+      },
       "posts.byId": (input) => {
         const { id } = input as RouterInputs["posts"]["byId"];
         return posts.find((post) => post.id === id);
@@ -85,7 +95,55 @@ function waitIdle() {
   });
 }
 
+/** Types a query into the author combobox and picks the matching option. */
+async function pickAuthor(
+  user: UserEvent,
+  dialog: HTMLElement,
+  query: string,
+  name: string
+) {
+  const input = within(dialog).getByLabelText("Author");
+  await user.type(input, query);
+  await user.click(await screen.findByRole("option", { name }));
+  return input;
+}
+
 it("creates the first post, creating its author on the way", async () => {
+  const user = userEvent.setup();
+  const backend = serveBackend();
+  renderApp("/posts");
+
+  await screen.findByText("No posts yet");
+  await user.click(screen.getByRole("button", { name: "New" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Create author" })
+  );
+
+  const authorDialog = await screen.findByRole("dialog", {
+    name: "New author",
+  });
+  await user.type(within(authorDialog).getByLabelText("Name"), "Ada");
+  await user.click(
+    within(authorDialog).getByRole("button", { name: "Create author" })
+  );
+
+  const postDialog = await screen.findByRole("dialog", { name: "New post" });
+  await pickAuthor(user, postDialog, "Ada", "Ada");
+  await user.type(await within(postDialog).findByLabelText("Title"), "Hello");
+  await user.click(
+    within(postDialog).getByRole("button", { name: "Create post" })
+  );
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  expect(await screen.findByText("Hello")).toBeTruthy();
+  expect(backend.posts).toMatchObject([
+    { author: { name: "Ada" }, title: "Hello" },
+  ]);
+});
+
+it("does not create a post without an author", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   renderApp("/posts");
@@ -110,13 +168,40 @@ it("creates the first post, creating its author on the way", async () => {
     within(postDialog).getByRole("button", { name: "Create post" })
   );
 
+  expect(await within(postDialog).findByText("Choose an author")).toBeTruthy();
+  expect(backend.posts).toHaveLength(0);
+});
+
+it("keeps the picked author when the input is retyped and left without a pick", async () => {
+  const user = userEvent.setup();
+  const backend = serveBackend();
+  backend.authors.push(
+    { createdAt: new Date(), id: 1, name: "Ada" },
+    { createdAt: new Date(), id: 2, name: "Bob" }
+  );
+  renderApp("/posts");
+
+  await screen.findByText("No posts yet");
+  await user.click(screen.getByRole("button", { name: "New" }));
+
+  const dialog = await screen.findByRole("dialog", { name: "New post" });
+  const input = await pickAuthor(user, dialog, "Ad", "Ada");
+
+  await user.click(input);
+  await user.keyboard("{Control>}a{/Control}");
+  await user.type(input, "Bo");
+  await screen.findByRole("option", { name: "Bob" });
+  await user.click(within(dialog).getByLabelText("Title"));
+
+  expect((input as HTMLInputElement).value).toBe("Ada");
+
+  await user.type(within(dialog).getByLabelText("Title"), "Still Ada");
+  await user.click(within(dialog).getByRole("button", { name: "Create post" }));
+
   await waitFor(() => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
-  expect(await screen.findByText("Hello")).toBeTruthy();
-  expect(backend.posts).toMatchObject([
-    { author: { name: "Ada" }, title: "Hello" },
-  ]);
+  expect(backend.posts).toMatchObject([{ authorId: 1, title: "Still Ada" }]);
 });
 
 // Any idle re-render loop on a page burns CPU without failing anything else.
@@ -165,6 +250,32 @@ it("pages through more posts than fit on one page", async () => {
   expect(router.state.location.search).toMatchObject({ page: 2 });
 });
 
+it("creates a post for an author outside the first page of results", async () => {
+  const user = userEvent.setup();
+  const backend = serveBackend();
+  for (let n = 1; n <= 25; n += 1) {
+    backend.authors.push({
+      createdAt: new Date(),
+      id: n,
+      name: `Author ${n}`,
+    });
+  }
+  renderApp("/posts");
+
+  await screen.findByText("No posts yet");
+  await user.click(screen.getByRole("button", { name: "New" }));
+
+  const dialog = await screen.findByRole("dialog", { name: "New post" });
+  await pickAuthor(user, dialog, "Author 25", "Author 25");
+  await user.type(within(dialog).getByLabelText("Title"), "Late author");
+  await user.click(within(dialog).getByRole("button", { name: "Create post" }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+  expect(backend.posts).toMatchObject([{ authorId: 25 }]);
+});
+
 it("keeps an edited post's author even when it is not among the first authors", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
@@ -194,7 +305,8 @@ it("keeps an edited post's author even when it is not among the first authors", 
   );
   await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit post" });
-  expect(await within(dialog).findByDisplayValue("Author 1")).toBeTruthy();
+  const authorInput = within(dialog).getByLabelText("Author");
+  expect((authorInput as HTMLInputElement).value).toBe("Author 1");
   await user.click(
     within(dialog).getByRole("button", { name: "Save changes" })
   );

@@ -7,11 +7,13 @@ type UpdatePostInput = RouterInputs["posts"]["update"];
 
 /**
  * UI form schema from domain create input.
- * Body: UI `""` → wire `null`. authorId: use valueAsNumber on the select.
+ * Body: UI `""` → wire `null`. authorId: UI `0` means "nothing picked yet", so
+ * the message is a picker prompt instead of the domain's id validation.
  */
 export const postFormSchema = createPostInput
   .pick({ authorId: true, title: true })
   .extend({
+    authorId: z.number().int().min(1, "Choose an author"),
     body: z.string().optional(),
   });
 

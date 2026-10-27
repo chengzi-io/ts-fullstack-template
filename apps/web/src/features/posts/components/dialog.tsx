@@ -59,7 +59,6 @@ function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
 }
 
 function PostDialogBody({
-  authorSearch,
   authors,
   busy,
   defaults,
@@ -74,7 +73,6 @@ function PostDialogBody({
   showForm,
   submitLabel,
 }: {
-  authorSearch: string;
   authors: AuthorSummary[];
   busy: boolean;
   defaults: PostFormValues;
@@ -96,7 +94,6 @@ function PostDialogBody({
       ) : null}
       {showForm ? (
         <PostForm
-          authorSearch={authorSearch}
           authors={authors}
           defaultValues={defaults}
           isSubmitting={busy}
@@ -238,7 +235,6 @@ export function PostDialog() {
         ) : null}
 
         <PostDialogBody
-          authorSearch={authorSearch}
           authors={authors}
           busy={busy}
           defaults={defaults}
