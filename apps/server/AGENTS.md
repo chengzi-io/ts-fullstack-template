@@ -79,8 +79,8 @@ stalls, including a hanging span flush.
 Opt-in, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: `startTracing` then
 loads the SDK/exporter and registers a `NodeTracerProvider` with a
 `BatchSpanProcessor` (OTLP/HTTP); with the variable unset nothing from the SDK
-is imported and the API stays no-op. `@hono/otel` is the first middleware and
-resolves its tracer when `createApp` runs, so `index.ts` starts tracing first.
+is imported and the API stays no-op. `@hono/otel` is the first middleware;
+`index.ts` registers the provider before the app and the DB are created.
 `lib/logger.ts` adds `trace_id` / `span_id` / `trace_flags` to every line from
 the active span.
 
@@ -115,8 +115,9 @@ No auto-instrumentation: `tsup` emits an ESM bundle, so the usual
 | `OTEL_RESOURCE_ATTRIBUTES` | platform env | extra resource attributes, `key=value,...` |
 | `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | platform env | read by the exporter / SDK; not declared in `env.ts` |
 
-The SDK (2.x) does not fold `OTEL_SERVICE_NAME` or `OTEL_RESOURCE_ATTRIBUTES`
-into its default resource, so `lib/tracing.ts` builds the resource itself.
+The SDK (2.x) default resource ignores `OTEL_SERVICE_NAME` and
+`OTEL_RESOURCE_ATTRIBUTES`; `lib/tracing.ts` merges in `envDetector`, which
+reads both.
 
 ## Testing
 

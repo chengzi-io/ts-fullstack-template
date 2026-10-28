@@ -1,4 +1,4 @@
-import { ProxyTracerProvider, trace } from "@opentelemetry/api";
+import { trace } from "@opentelemetry/api";
 import {
   InMemorySpanExporter,
   NodeTracerProvider,
@@ -20,14 +20,13 @@ import { createTestApp } from "./app.js";
 const SERVICE_NAME = "server-tracing-test";
 
 describe("tracing without a provider", () => {
-  it("stays a no-op when the endpoint is unset", async () => {
-    const tracing = await startTracing({ endpoint: undefined });
-
-    await expect(tracing.shutdown()).resolves.toBeUndefined();
-    expect(trace.getTracerProvider()).toBeInstanceOf(ProxyTracerProvider);
+  // No provider may leak in from the suite below or a reordered run.
+  beforeEach(() => {
+    trace.disable();
   });
 
-  it("logs no trace id and records nothing", async () => {
+  it("stays a no-op when the endpoint is unset", async () => {
+    const tracing = await startTracing({ endpoint: undefined });
     const { app, dispose, logs } = await createTestApp();
 
     await app.request("/");
@@ -35,6 +34,7 @@ describe("tracing without a provider", () => {
     expect(logs.some((entry) => "trace_id" in entry)).toBe(false);
 
     await dispose();
+    await expect(tracing.shutdown()).resolves.toBeUndefined();
   });
 });
 

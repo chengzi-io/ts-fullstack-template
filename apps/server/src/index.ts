@@ -14,7 +14,6 @@ const log = createLogger({
   nodeEnv: env.NODE_ENV,
 });
 
-// Before `createApp`: `@hono/otel` resolves its tracer when the app is built.
 const tracing = await startTracing({
   endpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT,
 });

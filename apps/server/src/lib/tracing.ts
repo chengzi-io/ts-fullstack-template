@@ -12,25 +12,15 @@ export interface StartTracingOptions {
 const noopHandle: TracingHandle = { shutdown: () => Promise.resolve() };
 
 /**
- * The SDK (2.x) no longer folds `OTEL_SERVICE_NAME` or `OTEL_RESOURCE_ATTRIBUTES`
- * into its default resource, so read them here: service name wins over the
- * same key in `OTEL_RESOURCE_ATTRIBUTES`, per the OTel spec.
+ * The SDK (2.x) default resource ignores `OTEL_SERVICE_NAME` and
+ * `OTEL_RESOURCE_ATTRIBUTES`, so merge in `envDetector`, which reads both.
  */
 export async function createTracingResource(): Promise<Resource> {
-  const {
-    defaultResource,
-    detectResources,
-    envDetector,
-    resourceFromAttributes,
-  } = await import("@opentelemetry/resources");
+  const { defaultResource, detectResources, envDetector } = await import(
+    "@opentelemetry/resources"
+  );
 
-  const detected = detectResources({ detectors: [envDetector] });
-  const serviceName = process.env.OTEL_SERVICE_NAME;
-  const resource = defaultResource().merge(detected);
-
-  return serviceName
-    ? resource.merge(resourceFromAttributes({ "service.name": serviceName }))
-    : resource;
+  return defaultResource().merge(detectResources({ detectors: [envDetector] }));
 }
 
 /**
