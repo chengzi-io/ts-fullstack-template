@@ -81,7 +81,7 @@ const STACK_GROUPS: StackGroup[] = [
       { detail: "Pages rendered like a user", name: "Testing Library" },
       { detail: "DOM environment", name: "jsdom" },
       { detail: "tRPC mocks at the network", name: "MSW" },
-      { detail: "End-to-end · planned", name: "Playwright" },
+      { detail: "End-to-end · critical flow", name: "Playwright" },
       { detail: "A11y in E2E · planned", name: "axe-core" },
     ],
     title: "Quality",
