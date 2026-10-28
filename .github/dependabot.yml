@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # pnpm workspaces are resolved from the root lockfile, so one entry at "/"
+  # covers every app, package, and module.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Majors stay one PR each: they need their own review.
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keeps the commit-SHA pins (and their `# vX.Y.Z` comments) in ci.yml current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
