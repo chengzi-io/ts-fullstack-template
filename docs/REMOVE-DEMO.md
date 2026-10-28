@@ -34,6 +34,7 @@ apps/web/src/features/authors/
 apps/web/src/features/posts/
 apps/web/src/routes/authors/
 apps/web/src/routes/posts/
+apps/web/test/authors-page.test.tsx
 apps/web/test/posts-page.test.tsx
 ```
 
