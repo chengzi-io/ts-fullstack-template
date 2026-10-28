@@ -108,10 +108,12 @@ faster integration tests.
 
 ## 15. Dependency audit blocks only what a PR introduces
 
-Dependency review fails a PR only on advisories it adds; a weekly
-`pnpm audit --prod` reports the backlog, and Dependabot proposes the fixes.
-A PR gate on the whole tree would turn every open PR red the day an
-advisory is published, whatever the PR changed.
+Dependency review fails a PR only on advisories it adds. The backlog —
+advisories published later for what the lockfile already holds — goes to
+Dependabot alerts and security updates. A PR gate on the whole tree would
+turn every open PR red the day an advisory is published, whatever the PR
+changed. A scheduled `pnpm audit` would repeat the alerts with less reach:
+its failures sit on the Actions page and open no fix.
 
 ## 16. Releases come from Conventional Commits
 
