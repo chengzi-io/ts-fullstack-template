@@ -1,12 +1,8 @@
-import {
-  createMemoryHistory,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import { Profiler } from "react";
 
-import { routeTree } from "@/routeTree.gen.ts";
+import { createAppRouter } from "@/lib/router.ts";
 
 const ignoreCommit = () => undefined;
 
@@ -15,9 +11,8 @@ const ignoreCommit = () => undefined;
  * `onCommit` sees every React commit (for idle-render guards).
  */
 export function renderApp(url: string, onCommit: () => void = ignoreCommit) {
-  const router = createRouter({
+  const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [url] }),
-    routeTree,
   });
   render(
     <Profiler id="app" onRender={onCommit}>

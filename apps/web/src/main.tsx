@@ -1,11 +1,11 @@
-import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "@workspace/ui/globals.css";
-import { routeTree } from "./routeTree.gen.ts";
+import { createAppRouter } from "./lib/router.ts";
 
-const router = createRouter({ routeTree });
+const router = createAppRouter();
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -11,14 +11,21 @@ type Resolver = (input: unknown) => unknown;
  * A failure a resolver throws to answer like the API does: `trpc()` replies
  * with `{ error: { json: { message, data: { code } } } }` and an error HTTP
  * status, which the client raises as a `TRPCClientError` carrying the code and
- * the message a real server would send.
+ * the message a real server would send. `data` adds what the API's error
+ * formatter puts on every error — e.g. `requestId`.
  */
 export class TrpcError extends Error {
   readonly code: string;
+  readonly data: Record<string, unknown>;
 
-  constructor(code: string, message: string) {
+  constructor(
+    code: string,
+    message: string,
+    data: Record<string, unknown> = {}
+  ) {
     super(message);
     this.code = code;
+    this.data = data;
     this.name = "TrpcError";
   }
 }
@@ -66,6 +73,7 @@ export function trpc(resolvers: Record<string, Resolver>) {
                 code: error.code,
                 httpStatus,
                 path,
+                ...error.data,
               },
               message: error.message,
             },
