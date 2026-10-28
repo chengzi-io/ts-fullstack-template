@@ -93,8 +93,11 @@ changelog by hand.
 - **PRs**: `.github/workflows/dependency-review.yml` fails a PR that *adds* a
 dependency with a high or critical advisory (needs a public repo or GitHub
 Advanced Security).
-- **Weekly**: `.github/workflows/audit.yml` runs `pnpm audit --prod` on a
-schedule. It is a reminder, never a PR gate — fix the finding with a bump.
+- **Backlog**: Dependabot alerts (Security tab) cover the whole lockfile, dev
+dependencies included, and Dependabot security updates open the fix PRs; both
+are turned on by `scripts/github/setup-repo.sh`. When a parent pins a
+vulnerable transitive release and Dependabot cannot bump it, add a same-major
+entry to `overrides` in `pnpm-workspace.yaml`.
 
 ## Maintainer setup
 
