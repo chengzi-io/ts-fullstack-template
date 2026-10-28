@@ -8,15 +8,15 @@
 // repository, resets the release state (version 0.0.0, no CHANGELOG.md),
 // points LICENSE, CODEOWNERS, README.md and the .github templates at the new
 // repository, drops the README parts that only describe the template, then
-// deletes itself. Review the diff and commit it. Needs `gh` logged in:
+// deletes itself and its test. Review the diff and commit it. Needs `gh` logged in:
 // CODEOWNERS gets your GitHub login.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 const templateRepo = "chengzi-io/ts-fullstack-template";
 const [, templateName] = templateRepo.split("/");
-const self = "scripts/init-project.mjs";
+// This script and its test mean nothing in the new project.
+const ownFiles = ["scripts/init-project.mjs", "scripts/init-project.test.mjs"];
 
 // https://github.com/o/r.git, git@github.com:o/r.git, and SSH host aliases.
 const remoteRepo = /[:/]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/;
@@ -27,16 +27,20 @@ const templateOnly =
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim();
 
-// Every replacement must land: a pattern that no longer matches means the
-// template changed under this script.
+// Every pattern must match: one that no longer does means the template
+// changed under this script. A match may still change nothing — an
+// unreleased template is already at 0.0.0.
 function edit(file, ...replacements) {
   let text = readFileSync(file, "utf8");
   for (const [pattern, replacement] of replacements) {
-    const next = text.replaceAll(pattern, replacement);
-    if (next === text) {
+    const found =
+      typeof pattern === "string"
+        ? text.includes(pattern)
+        : text.search(pattern) !== -1;
+    if (!found) {
       throw new Error(`${file}: nothing matches ${pattern}`);
     }
-    text = next;
+    text = text.replaceAll(pattern, replacement);
   }
   writeFileSync(file, text);
 }
@@ -91,7 +95,15 @@ edit(
 // added later that names the template repository.
 const grep = spawnSync(
   "git",
-  ["grep", "-l", "-F", templateRepo, "--", ".", `:!${self}`],
+  [
+    "grep",
+    "-l",
+    "-F",
+    templateRepo,
+    "--",
+    ".",
+    ...ownFiles.map((file) => `:!${file}`),
+  ],
   { encoding: "utf8" }
 );
 if (grep.status > 1) {
@@ -101,7 +113,9 @@ for (const file of grep.stdout.split("\n").filter(Boolean)) {
   edit(file, [templateRepo, repo]);
 }
 
-rmSync(fileURLToPath(import.meta.url));
+for (const file of ownFiles) {
+  rmSync(file);
+}
 
 console.log(`${repo} is set up from ${templateRepo} v${templateVersion}.
 
