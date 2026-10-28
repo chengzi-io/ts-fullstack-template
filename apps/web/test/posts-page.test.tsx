@@ -12,6 +12,7 @@ type Author = RouterOutputs["authors"]["byId"];
 type Post = RouterOutputs["posts"]["byId"];
 
 const IDLE_WINDOW_MS = 100;
+const SETTLE_WINDOWS = 20;
 
 /** In-memory stand-in for the procedures the posts page calls. */
 function serveBackend() {
@@ -93,6 +94,24 @@ function waitIdle() {
   return act(async () => {
     await new Promise((resolve) => setTimeout(resolve, IDLE_WINDOW_MS));
   });
+}
+
+/**
+ * Waits for a whole idle window without a commit. One late commit (a lazy
+ * chunk landing on a slow runner) settles; a render loop never does.
+ */
+async function waitUntilQuiet(
+  readCommits: () => number,
+  windowsLeft = SETTLE_WINDOWS
+): Promise<void> {
+  if (windowsLeft === 0) {
+    throw new Error(`Still committing after ${SETTLE_WINDOWS} idle windows`);
+  }
+  const before = readCommits();
+  await waitIdle();
+  if (readCommits() !== before) {
+    await waitUntilQuiet(readCommits, windowsLeft - 1);
+  }
 }
 
 /** Types a query into the author combobox and picks the matching option. */
@@ -213,7 +232,7 @@ it("does not re-render while idle", async () => {
   };
   renderApp("/posts", countCommit);
   await screen.findByText("No posts yet");
-  await waitIdle();
+  await waitUntilQuiet(() => commits);
   const settledCommits = commits;
 
   await waitIdle();
