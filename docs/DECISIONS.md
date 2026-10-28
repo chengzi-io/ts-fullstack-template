@@ -82,6 +82,43 @@ Production refuses a `file:` `DATABASE_URL` unless
 The demo uses autoincrement integers. They are enumerable and collide when
 databases merge; a public-facing or multi-region product should use UUIDv7.
 
+## 12. Tracing is opt-in OTLP; the request id stays the cross-tier key
+
+- **Decision:** the server traces only when `OTEL_EXPORTER_OTLP_ENDPOINT` is
+  set: `@hono/otel` middleware for one span per request, a pino `mixin` for
+  `trace_id` / `span_id` on every log line, spans flushed during shutdown.
+  The web sends no trace context; support correlates by request id.
+- **Why:** vendor-neutral and free when unused. OTel's auto-instrumentation
+  patches modules through a loader hook and silently does nothing in the
+  server's ESM bundle.
+- **Not yet:** per-procedure spans, metrics.
+
+## 13. Unexpected web errors go through one seam
+
+Failed queries and mutations and route crashes all reach `reportError`
+(`apps/web/src/lib/report-error.ts`), once per error, with the request id.
+An error tracker plugs in there; features keep showing expected errors inline.
+
+## 14. One E2E test, of the critical flow
+
+Playwright runs the built server on a fresh temp database and the built web
+(`vite preview`): create an author, post for it, see the post. It is a CI job
+and `pnpm e2e`, never a cached Turbo task. Everything else stays in the
+faster integration tests.
+
+## 15. Dependency audit blocks only what a PR introduces
+
+Dependency review fails a PR only on advisories it adds; a weekly
+`pnpm audit --prod` reports the backlog, and Dependabot proposes the fixes.
+A PR gate on the whole tree would turn every open PR red the day an
+advisory is published, whatever the PR changed.
+
+## 16. Releases come from Conventional Commits
+
+PR titles are checked and become the squash commit; release-please turns
+them into a Release PR with the changelog and the next version. Derived
+projects compare their base against the tags.
+
 ## Not decided yet — add when a product needs it
 
 - CORS for several origins or with credentials; CORP tuned per API
@@ -89,8 +126,7 @@ databases merge; a public-facing or multi-region product should use UUIDv7.
 - One patch schema instead of create/update pairs
 - Drizzle relational queries (schema passed to the client)
 - Rate limiting (needs a shared store once there are several instances)
-- OpenTelemetry / metrics; Playwright E2E for the critical flows
-- Template versioning (tags + changelog) so derived projects can track upgrades
+- Metrics
 
 ## Out of scope for the template
 
