@@ -99,7 +99,7 @@ committing (lefthook also runs it). What it cannot check is on you:
 # Testing
 
 - Vitest runs each package's `test/` (`*.test.ts`; `*.test.tsx` in
-  `apps/web`); import `describe` / `it` / `expect` from `vitest` (no globals)
+  `apps/web`) and the root `scripts/*.test.mjs`; import `describe` / `it` / `expect` from `vitest` (no globals)
 - Testing Trophy: integration first — module routers via `createTestContext()`,
   the host via `app.request()`, web pages via `renderApp()` with MSW `trpc()`.
   Unit tests for pure logic; E2E only for critical flows

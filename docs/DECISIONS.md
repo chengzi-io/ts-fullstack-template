@@ -120,8 +120,9 @@ its failures sit on the Actions page and open no fix.
 PR titles are checked and become the squash commit; release-please turns
 them into a Release PR with the changelog and the next version. Derived
 projects compare their base against the tags: `scripts/init-project.mjs`
-resets a new project to 0.0.0 and has its first commit name the template
-version it started from.
+resets a new project to 0.0.0 and has its first commit name the template's
+last release. "Use this template" copies `main`, which may be ahead of that
+tag, so `main` must stay usable between releases.
 
 ## Not decided yet — add when a product needs it
 
