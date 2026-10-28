@@ -50,15 +50,18 @@ src/
   index.ts              composition root + signals
   app.ts                Hono app factory
   env.ts                t3-env + Zod
-  lib/logger.ts         pino
-  lib/shutdown.ts       idempotent HTTP → DB close
+  lib/logger.ts         pino (+ trace ids, redaction)
+  lib/shutdown.ts       idempotent HTTP → DB → tracing close
+  lib/tracing.ts        opt-in OTLP tracing
   middleware/access-log.ts
   routes/probes.ts      /healthz · /readyz
 test/
   app.ts                createTestApp() → real app on createTestDb(), silent logger
   app.test.ts           probes · request id · error contract (test router)
-  shutdown.test.ts      injected server / DB / exit / timers
+  shutdown.test.ts      injected server / DB / tracing / exit / timers
   env.test.ts           fail-fast config
+  logger.test.ts        redaction
+  tracing.test.ts       spans, trace ids in logs, resource
 tsup.config.ts
 scripts/smoke-build.mjs
 ```
@@ -66,12 +69,27 @@ scripts/smoke-build.mjs
 ## Shutdown
 
 SIGTERM/SIGINT (or a fatal error) → `/readyz` answers 503 → wait
-`SHUTDOWN_DRAIN_MS` → close HTTP (in-flight requests finish) → close DB → exit.
-`SHUTDOWN_TIMEOUT_MS` force-closes sockets and exits 1 if that stalls.
+`SHUTDOWN_DRAIN_MS` → close HTTP (in-flight requests finish) → close DB →
+flush and stop tracing (if on) → exit. A failed DB or tracing close makes the
+exit code 1. `SHUTDOWN_TIMEOUT_MS` force-closes sockets and exits 1 if any step
+stalls, including a hanging span flush.
+
+## Tracing
+
+Opt-in, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: `startTracing` then
+loads the SDK/exporter and registers a `NodeTracerProvider` with a
+`BatchSpanProcessor` (OTLP/HTTP); with the variable unset nothing from the SDK
+is imported and the API stays no-op. `@hono/otel` is the first middleware and
+resolves its tracer when `createApp` runs, so `index.ts` starts tracing first.
+`lib/logger.ts` adds `trace_id` / `span_id` / `trace_flags` to every line from
+the active span.
+
+No auto-instrumentation: `tsup` emits an ESM bundle, so the usual
+`--require`/`--import` patches of `http` and friends do not apply here.
 
 ## Middleware order
 
-`requestId` → log child + `X-Request-Id` → access log (skip probes) → `secureHeaders` → `bodyLimit` → optional CORS on `/trpc/*` → routes → `notFound` / `onError`
+`otel` (span) → `requestId` → log child + `X-Request-Id` → access log (skip probes) → `secureHeaders` → `bodyLimit` → optional CORS on `/trpc/*` → routes → `notFound` / `onError`
 
 ## Endpoints
 
@@ -92,6 +110,13 @@ SIGTERM/SIGINT (or a fatal error) → `/readyz` answers 503 → wait
 | `SHUTDOWN_DRAIN_MS` | `apps/server/.env` | not-ready grace before HTTP closes — set to the load balancer's deregistration delay; must be below `SHUTDOWN_TIMEOUT_MS` |
 | `HTTP_KEEP_ALIVE_TIMEOUT_MS` | `apps/server/.env` | must exceed the load balancer's idle timeout (e.g. AWS ALB 60 s), or idle sockets close under it → sporadic 502s |
 | `DATABASE_SINGLE_INSTANCE` | `apps/server/.env` | production refuses a `file:` DB unless `true` (replicas would split the data) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `apps/server/.env` | the only OTel var we declare; unset = tracing off |
+| `OTEL_SERVICE_NAME` | platform env | `service.name` of the span resource (wins over `OTEL_RESOURCE_ATTRIBUTES`) |
+| `OTEL_RESOURCE_ATTRIBUTES` | platform env | extra resource attributes, `key=value,...` |
+| `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | platform env | read by the exporter / SDK; not declared in `env.ts` |
+
+The SDK (2.x) does not fold `OTEL_SERVICE_NAME` or `OTEL_RESOURCE_ATTRIBUTES`
+into its default resource, so `lib/tracing.ts` builds the resource itself.
 
 ## Testing
 

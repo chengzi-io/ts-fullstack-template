@@ -1,9 +1,9 @@
 import { createTestDb } from "@workspace/db/testing";
 import { createTRPCRouter, publicProcedure } from "@workspace/kernel/trpc";
-import pino from "pino";
 import { z } from "zod";
 
 import { createApp } from "../src/app.js";
+import { createLogger } from "../src/lib/logger.js";
 
 /** Host tests stay independent of business modules. */
 const testRouter = createTRPCRouter({
@@ -25,15 +25,16 @@ export async function createTestApp() {
   const { db, dispose } = await createTestDb();
   const lines: string[] = [];
   const logs: Record<string, unknown>[] = [];
-  const log = pino(
-    { level: "info" },
-    {
+  const log = createLogger({
+    destination: {
       write: (line: string) => {
         lines.push(line);
         logs.push(JSON.parse(line));
       },
-    }
-  );
+    },
+    level: "info",
+    nodeEnv: "test",
+  });
   const readiness = { draining: false };
   const app = createApp({
     db,

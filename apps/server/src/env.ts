@@ -31,6 +31,8 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
+    /** The only OTel gate we declare; the SDK reads its other OTEL_* vars. */
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
     /** Not-ready grace before closing HTTP; set to the LB's deregistration delay. */
     SHUTDOWN_DRAIN_MS: z.coerce.number().int().min(0).default(0),
