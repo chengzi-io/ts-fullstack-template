@@ -1,9 +1,13 @@
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { queryClient } from "@/lib/query-client.ts";
 
 import { server } from "./msw.ts";
+
+// The first render of a lazy route compiles its chunk; on a cold CI runner
+// that alone can pass the 1 s default of findBy* / waitFor.
+configure({ asyncUtilTimeout: 5000 });
 
 // Resets every feature store after each test (see __mocks__/zustand.ts).
 vi.mock("zustand");
