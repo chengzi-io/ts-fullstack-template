@@ -66,7 +66,7 @@ add it to `packages/api` (dependency + one `appRouter` line) and, for UI,
 `apps/web` (dependency + `features/<name>/` + route + nav link). Its tables are
 picked up by the drizzle config and `createTestDb()` automatically.
 
-**Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree  
+**Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree. Commits pass `commitlint` (`.commitlintrc.yaml`, `commit-msg` hook) and PR titles pass the same Conventional Commit rules (`.github/workflows/pr-title.yml`) because the title becomes the squash commit  
 **DB (demo / local iterate):** `pnpm db:push` — real migrations after product schema stabilizes
 
 # Contract changes
