@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request supersedes its running checks. Each push to
+# main gets its own group, so none is cancelled or skipped.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-24.04

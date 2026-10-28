@@ -9,6 +9,10 @@ permissions:
 
 jobs:
   release-please:
+    # A repository made from the template has no release App until
+    # scripts/github/create-release-app.mjs runs, yet its first commit already
+    # pushes to main. Skip until the App exists instead of failing.
+    if: vars.RELEASE_APP_CLIENT_ID != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
