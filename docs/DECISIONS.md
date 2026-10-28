@@ -124,6 +124,23 @@ resets a new project to 0.0.0 and has its first commit name the template's
 last release. "Use this template" copies `main`, which may be ahead of that
 tag, so `main` must stay usable between releases.
 
+## 17. Drizzle stays on its stable release line
+
+- **Decision:** `drizzle-orm` and `drizzle-kit` are pinned to the npm
+  `latest` release (0.45.x / 0.31.x), not the 1.0 release candidates.
+- **Why:** a template is copied into products, so it should not hand them a
+  pre-release. The 1.0 RC was in use since the first db commit with no
+  recorded reason, and nothing here needs it: the schema, queries,
+  `drizzle({ client })`, `dialect: "turso"`, and kit `push` / `generate` /
+  `migrate` / `check` / `export` all exist on stable.
+- **Consequences:** `createTestDb()` runs the SQL script from
+  `drizzle-kit export --sql` (the RC's `--output json` is not on stable).
+  `drizzle.config.ts` has no `strict: true`: on stable it confirms every
+  push, which fails without a TTY (`pnpm e2e`, CI); pushes that lose data
+  still ask. Migrations use stable's `drizzle/meta/_journal.json` layout.
+  Moving to 1.0 once it is stable is a deliberate upgrade (relational
+  queries v2, migration folder format), not a version bump.
+
 ## Not decided yet — add when a product needs it
 
 - CORS for several origins or with credentials; CORP tuned per API

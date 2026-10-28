@@ -4,6 +4,7 @@ Database plumbing shared by every module: the client, the transaction-aware
 `Executor` type, constraint helpers, the test database, and drizzle-kit
 config + migrations. **Tables and queries live in `modules/<domain>`**, not here.
 No Hono / tRPC / React. No `process.env` inside `createDb`.
+Drizzle is the stable release line, pinned exactly — not 1.0 RC (DECISIONS #17).
 
 ## Public surface
 
