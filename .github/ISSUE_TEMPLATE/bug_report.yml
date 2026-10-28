@@ -1,0 +1,83 @@
+name: Bug report
+description: Something is broken or behaves differently than documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please search existing issues first.
+
+        **Security problems do not belong here** — report them privately, see
+        [SECURITY.md](https://github.com/chengzi-io/ts-fullstack-template/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The actual behavior, including the full error message and stack trace if there is one.
+      placeholder: `pnpm dev` exits with ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What should have happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps. Include the commands you ran and any seed data.
+      placeholder: |
+        1. pnpm install
+        2. pnpm db:push
+        3. pnpm dev
+        4. Open /posts and submit the form
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repo is affected?
+      multiple: true
+      options:
+        - apps/web
+        - apps/server
+        - modules/*
+        - packages/api
+        - packages/kernel
+        - packages/db
+        - packages/ui
+        - tooling / CI / scripts
+        - docs
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag, or the commit SHA / branch you built from.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node and pnpm versions (`node -v`, `pnpm -v`), OS, and anything unusual about your setup.
+      placeholder: |
+        Node: 22.x
+        pnpm: 10.33.4
+        OS: macOS 15
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
