@@ -98,19 +98,21 @@ schedule. It is a reminder, never a PR gate — fix the finding with a bump.
 
 ## Maintainer setup
 
-One-time repository settings the workflows depend on:
+One-time repository settings the workflows depend on, scripted with `gh`
+(log in as a repository admin):
 
-1. **GitHub App** for releases: create one with the webhook disabled and
-   `Contents: read and write` + `Pull requests: read and write`, install it on
-   this repository, then set the repository variable
-   `RELEASE_APP_CLIENT_ID` (the App's client ID) and the secret
-   `RELEASE_APP_PRIVATE_KEY` (a generated private key). The App token is what
-   lets the Release PR trigger CI.
-2. **Branch protection on `main`**: require a pull request, require the
-   `Validate PR title` check and the CI jobs (`verify`, `e2e`), and allow
-   **squash merge only** with the PR title as the commit title.
-3. **Actions workflow permissions**: read-only by default (Settings → Actions →
-   General); each workflow elevates only inside the job that needs it.
+1. **Release App** — `node scripts/github/create-release-app.mjs`: your browser
+   opens a prefilled "Create GitHub App" page (webhook off; Contents, Issues,
+   Pull requests: read and write). After you confirm, the script stores the
+   variable `RELEASE_APP_CLIENT_ID` and the secret `RELEASE_APP_PRIVATE_KEY`,
+   then prints the link to install the App on this repository. Its token is
+   what lets the Release PR trigger CI.
+2. **Repository settings** — `scripts/github/setup-repo.sh`, once the workflows
+   are on `main`: squash merge only with the PR title as the commit; branch
+   protection requiring a PR and the `Validate PR title`, `verify`, `e2e`, and
+   `dependency-review` checks; read-only Actions token; private vulnerability
+   reporting, secret scanning with push protection, and Dependabot security
+   updates. It prints the settings back so you can check them.
 
 ## Security and license
 
