@@ -115,7 +115,8 @@ committing (lefthook also runs it). What it cannot check is on you:
   tests that import your change
 - `pnpm e2e` builds and runs Playwright (`apps/web/e2e/*.e2e.ts`) against real
   processes it starts itself — a fresh temp database, `apps/server` and `vite
-  preview` — so no dev server may be left running
+  preview` — so no dev server may be left running. Once per machine, install
+  its browser: `pnpm --filter web exec playwright install chromium`
 - Keep suites flat; assert inside `it()`; async/await, no done callbacks
 
 Why things are the way they are: `docs/DECISIONS.md`.

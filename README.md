@@ -61,7 +61,8 @@ work is checked by tools rather than by review alone:
 
 ## Quick start
 
-Needs Node 22 (`.nvmrc`) and pnpm through corepack.
+Needs Node 22 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS,
+Linux, or WSL on Windows).
 
 ```bash
 corepack enable
@@ -124,9 +125,9 @@ Open <http://localhost:5173> and try `/authors`, then `/posts`. The API
 | `pnpm check` / `pnpm fix` | Lint and format (Biome) |
 | `pnpm typecheck` | Type-check the workspace |
 | `pnpm test` | Unit and integration tests |
-| `pnpm e2e` | Build, then run Playwright against real processes |
+| `pnpm e2e` | Build, then run Playwright against real processes (once per machine: `pnpm --filter web exec playwright install chromium`) |
 | `pnpm build` | Production build |
-| `pnpm db:push` | Sync the schema (local iteration, demo) |
+| `pnpm db:push` | Sync the schema while it is still changing |
 | `pnpm db:generate` / `pnpm db:migrate` | Migrations, once the schema stabilizes |
 
 ### Disposable demo
