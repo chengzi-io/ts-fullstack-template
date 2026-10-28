@@ -148,7 +148,7 @@ migrations. Remove it with [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md).
 3. Open a pull request; CI runs `check`, `typecheck`, `test`, `build`, and the E2E test
 
 Setup, quality gates, and release flow: [CONTRIBUTING.md](CONTRIBUTING.md).
-Report vulnerabilities privately: [SECURITY.md](SECURITY.md).
+Report vulnerabilities privately: [SECURITY.md](.github/SECURITY.md).
 
 ## License
 
