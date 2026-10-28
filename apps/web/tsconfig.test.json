@@ -5,5 +5,5 @@
   },
   // Tests render real routes, whose types need the router registration in
   // src/main.tsx and the generated route tree — so check them with all of src.
-  "include": ["src", "test"]
+  "include": ["src", "test", "e2e"]
 }
