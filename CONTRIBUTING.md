@@ -107,8 +107,8 @@ One-time repository settings the workflows depend on, scripted with `gh`
    variable `RELEASE_APP_CLIENT_ID` and the secret `RELEASE_APP_PRIVATE_KEY`,
    then prints the link to install the App on this repository. Its token is
    what lets the Release PR trigger CI.
-2. **Repository settings** — `scripts/github/setup-repo.sh`, once the workflows
-   are on `main`: squash merge only with the PR title as the commit; branch
+2. **Repository settings** — `scripts/github/setup-repo.sh`, as soon as the
+   workflows are on `main` (dependency review fails until it has run): squash merge only with the PR title as the commit; branch
    protection requiring a PR and the `Validate PR title`, `verify`, `e2e`, and
    `dependency-review` checks; read-only Actions token; private vulnerability
    reporting, secret scanning with push protection, and Dependabot security

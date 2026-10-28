@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Applies the GitHub settings this repo's workflows rely on, then reads them
-# back. Idempotent. Run it after the workflows are on the default branch:
+# back. Idempotent. Run it as soon as the workflows are on the default branch
+# (for a repo made from this template: right after creating it):
 #
 #   scripts/github/setup-repo.sh [owner/repo]
 #
@@ -33,6 +34,7 @@ gh api --silent --method PUT "repos/$repo/actions/permissions/workflow" \
 
 # SECURITY.md sends reporters to "Report a vulnerability".
 gh api --silent --method PUT "repos/$repo/private-vulnerability-reporting"
+# Also turns on the dependency graph; dependency-review.yml fails without it.
 gh api --silent --method PUT "repos/$repo/vulnerability-alerts"
 gh api --silent --method PUT "repos/$repo/automated-security-fixes"
 gh api --silent --method PATCH "repos/$repo" \
