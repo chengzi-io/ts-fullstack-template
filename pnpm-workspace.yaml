@@ -6,3 +6,10 @@ packages:
 allowBuilds:
   esbuild: true
   msw: false
+
+# @hookform/resolvers imports zod without declaring it as a peer; without
+# this it resolves whatever zod happens to be hoisted.
+packageExtensions:
+  "@hookform/resolvers":
+    peerDependencies:
+      zod: "^4.0.0"
