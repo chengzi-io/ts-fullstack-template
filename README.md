@@ -2,6 +2,11 @@
 
 TypeScript full-stack monorepo template: **Vite + React**, **Hono + tRPC**, **Drizzle + libSQL**, shared **domain Zod** contracts.
 
+## Prerequisites
+
+Node 22 (see `.nvmrc`) and pnpm via corepack (`corepack enable`; the version is
+pinned by `packageManager` in `package.json`).
+
 ## Quick start
 
 ```bash
@@ -56,3 +61,9 @@ The template includes **authors + posts** (FK, join on list, create forms) so th
 - Package `AGENTS.md` files — boundaries for humans and agents
 - [docs/DECISIONS.md](./docs/DECISIONS.md) — why the template is shaped this way, and what is still open
 - [apps/server/README.md](./apps/server/README.md) — production build, env, probes, shutdown
+
+## Contributing
+
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — setup, quality gates, branch and commit conventions
+- [SECURITY.md](./SECURITY.md) — report vulnerabilities privately
+- [LICENSE](./LICENSE) — MIT

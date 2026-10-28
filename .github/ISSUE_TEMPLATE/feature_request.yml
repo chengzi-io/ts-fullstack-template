@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a capability or an improvement to the template.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a template, so proposals are judged on how much they add versus
+        how much structure they impose. Describe the problem before the solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you unable to do today, and in what situation? Skip the proposed API here.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: The behavior or API you want. Note which layer it belongs to (module, kernel, db, web, server).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, other designs, or what you do instead today.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - apps/web
+        - apps/server
+        - modules/*
+        - packages/api
+        - packages/kernel
+        - packages/db
+        - packages/ui
+        - tooling / CI / scripts
+        - docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and discussions for this request.
+          required: true
+        - label: I read the relevant AGENTS.md files for the package this touches.
+          required: true
