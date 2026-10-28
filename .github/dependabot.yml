@@ -7,6 +7,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Titles are Conventional Commits, so a squash merge passes the PR title
+    # check: chore(deps): bump …
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
     # Majors stay one PR each: they need their own review.
     groups:
       minor-and-patch:
@@ -22,3 +28,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # ci(deps): bump … — the actions pins are CI, not product dependencies.
+    commit-message:
+      prefix: "ci"
