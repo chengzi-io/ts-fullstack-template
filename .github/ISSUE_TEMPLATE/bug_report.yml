@@ -8,7 +8,7 @@ body:
         Thanks for the report. Please search existing issues first.
 
         **Security problems do not belong here** — report them privately, see
-        [SECURITY.md](https://github.com/chengzi-io/ts-fullstack-template/blob/main/SECURITY.md).
+        [the security policy](https://github.com/chengzi-io/ts-fullstack-template/security/policy).
   - type: textarea
     id: what-happened
     attributes:

@@ -5,6 +5,8 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Its postinstall only runs `lefthook install`, which `prepare` already does.
+  lefthook: false
   msw: false
 
 # @hookform/resolvers imports zod without declaring it as a peer; without

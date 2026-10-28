@@ -120,5 +120,5 @@ One-time repository settings the workflows depend on, scripted with `gh`
 
 ## Security and license
 
-Report vulnerabilities privately per [`SECURITY.md`](./SECURITY.md), never in a
+Report vulnerabilities privately per [`SECURITY.md`](./.github/SECURITY.md), never in a
 public issue. Contributions are licensed under the [MIT License](./LICENSE).
