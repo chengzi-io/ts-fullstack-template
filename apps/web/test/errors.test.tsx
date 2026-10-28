@@ -47,6 +47,8 @@ it("shows the route error with its request id and recovers on Try again", async 
   const reported = vi
     .spyOn(console, "error")
     .mockImplementation(() => undefined);
+  const reports = () =>
+    reported.mock.calls.filter(([label]) => label === "Unexpected error:");
   let healthy = false;
   // A failed query is not something the posts page can render, so it reaches
   // the route error boundary like any other render crash.
@@ -71,6 +73,9 @@ it("shows the route error with its request id and recovers on Try again", async 
     expect(await screen.findByText("Something went wrong")).toBeTruthy();
     expect(screen.getByText("boom")).toBeTruthy();
     expect(screen.getByText("Request id: req-42")).toBeTruthy();
+    // The query cache and the route boundary both see this error.
+    expect(reports()).toHaveLength(1);
+    expect(reports()[0][2]).toMatchObject({ requestId: "req-42" });
 
     healthy = true;
     await user.click(screen.getByRole("button", { name: "Try again" }));

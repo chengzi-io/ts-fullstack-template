@@ -1,17 +1,17 @@
-import { isTRPCClientError } from "@trpc/client";
-
-/** The API puts a `requestId` on every tRPC error; support needs it verbatim. */
-export function requestIdOf(error: unknown): string | null {
-  if (!isTRPCClientError(error)) {
-    return null;
-  }
-  const requestId = (error.data as { requestId?: unknown } | undefined)
-    ?.requestId;
-  return typeof requestId === "string" ? requestId : null;
-}
+/** Errors already reported: the query cache and a route boundary can both see one. */
+const reportedErrors = new WeakSet<object>();
 
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** The API puts a `requestId` on every tRPC error; support needs it verbatim. */
+export function requestIdOf(error: unknown): string | null {
+  // Duck-typed on purpose: importing @trpc/client here would pull the tRPC
+  // client into the entry chunk.
+  const requestId = (error as { data?: { requestId?: unknown } } | null)?.data
+    ?.requestId;
+  return typeof requestId === "string" ? requestId : null;
 }
 
 /**
@@ -19,12 +19,19 @@ export function errorMessage(error: unknown): string {
  * mutation, or one a route error boundary caught. Features keep showing
  * expected errors inline; this is only for the ones nobody planned for.
  *
+ * An error object is reported once, whichever seam sees it first.
+ *
  * This is the seam an error tracker plugs into: forward `message`,
  * `requestId`, `context` and `error` from here.
  */
 export function reportError(error: unknown, context?: Record<string, unknown>) {
-  const message = errorMessage(error);
-  console.error("Unexpected error:", message, {
+  if (typeof error === "object" && error !== null) {
+    if (reportedErrors.has(error)) {
+      return;
+    }
+    reportedErrors.add(error);
+  }
+  console.error("Unexpected error:", errorMessage(error), {
     context,
     error,
     requestId: requestIdOf(error),

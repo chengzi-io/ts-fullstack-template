@@ -1,4 +1,4 @@
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import { useCallback } from "react";
 import { queryClient } from "@/lib/query-client.ts";
@@ -9,20 +9,19 @@ import { errorMessage, reportError, requestIdOf } from "@/lib/report-error.ts";
  * once, in the router's `defaultOnCatch` (see `lib/router.ts`).
  */
 export function RouteError({ error, reset }: ErrorComponentProps) {
-  const router = useRouter();
   const requestId = requestIdOf(error);
 
   const handleRetry = useCallback(() => {
-    // Drop the cached failure before remounting, or the route renders the same
-    // bad data and throws again.
+    // Drop the cached failures before remounting, or the route renders the same
+    // bad data and throws again. Successful data stays cached.
     queryClient
-      .resetQueries({ type: "all" })
+      .resetQueries({
+        predicate: (query) => query.state.status === "error",
+        type: "all",
+      })
       .catch((cause) => reportError(cause, { scope: "route-error" }));
     reset();
-    router
-      .invalidate()
-      .catch((cause) => reportError(cause, { scope: "route-error" }));
-  }, [reset, router]);
+  }, [reset]);
 
   return (
     <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-4">
