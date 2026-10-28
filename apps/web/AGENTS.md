@@ -138,6 +138,12 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
    `q` in URL search params and passes them to the list query (search is
    debounced with `hooks/use-debounced-value.ts`). Never fetch "all rows" —
    pickers search too (see the post form's author field).
+8. **A paged list never strands the user.** When a delete leaves the page
+   past the end, step back to the last page — `routes/posts/index.tsx` does it
+   for the URL; a list paged in local state (e.g. inside a dialog) needs the
+   same effect. `placeholderData: keepPreviousData` is for paging or searching
+   one list: when the list's parent changes (another post's comments), mount
+   a fresh list, or the old parent's rows show under the new title.
 
 ## Dev tools
 
