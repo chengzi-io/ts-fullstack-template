@@ -12,6 +12,7 @@
     "build": "turbo build",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
+    "e2e": "pnpm build && pnpm --filter web e2e",
     "typecheck": "turbo typecheck",
     "check": "ultracite check",
     "fix": "ultracite fix",

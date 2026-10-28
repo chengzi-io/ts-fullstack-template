@@ -113,6 +113,9 @@ committing (lefthook also runs it). What it cannot check is on you:
 - `pnpm test` runs everything (Turbo caches unchanged packages);
   `pnpm exec vitest related <files> --run` inside a package runs only the
   tests that import your change
+- `pnpm e2e` builds and runs Playwright (`apps/web/e2e/*.e2e.ts`) against real
+  processes it starts itself — a fresh temp database, `apps/server` and `vite
+  preview` — so no dev server may be left running
 - Keep suites flat; assert inside `it()`; async/await, no done callbacks
 
 Why things are the way they are: `docs/DECISIONS.md`.
