@@ -7,10 +7,16 @@ import { createApp } from "./app.js";
 import { env } from "./env.js";
 import { createLogger } from "./lib/logger.js";
 import { createShutdown } from "./lib/shutdown.js";
+import { startTracing } from "./lib/tracing.js";
 
 const log = createLogger({
   level: env.LOG_LEVEL,
   nodeEnv: env.NODE_ENV,
+});
+
+// Before `createApp`: `@hono/otel` resolves its tracer when the app is built.
+const tracing = await startTracing({
+  endpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT,
 });
 
 const db = createDb({
@@ -44,6 +50,7 @@ const server = serve(
 
 const shutdown = createShutdown({
   closeDatabase: () => db.close(),
+  closeTracing: () => tracing.shutdown(),
   drainMs: env.SHUTDOWN_DRAIN_MS,
   exit: (code) => process.exit(code),
   log,

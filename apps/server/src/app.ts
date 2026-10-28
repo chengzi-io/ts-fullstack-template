@@ -1,3 +1,4 @@
+import { httpInstrumentationMiddleware } from "@hono/otel";
 import { trpcServer } from "@hono/trpc-server";
 import type { AnyTRPCRouter } from "@trpc/server";
 import type { Database } from "@workspace/db";
@@ -34,6 +35,7 @@ export function createApp(options: CreateAppOptions) {
   const { corsOrigin, db, isDraining, log, router } = options;
   const app = new Hono<{ Variables: AppVariables }>();
 
+  app.use(httpInstrumentationMiddleware());
   app.use(requestId());
   app.use(async (c, next) => {
     const id = c.get("requestId");

@@ -20,6 +20,8 @@ interface ShutdownTimer {
 export interface CreateShutdownOptions {
   clearTimeout?: (timer: ShutdownTimer) => void;
   closeDatabase: () => void;
+  /** Flush and stop the tracer provider; runs after the database closes. */
+  closeTracing?: () => Promise<void>;
   /**
    * Time between reporting not-ready and closing HTTP, so a load balancer
    * stops routing here first. Must be below `timeoutMs`.
@@ -47,6 +49,7 @@ export function createShutdown(options: CreateShutdownOptions) {
   const {
     clearTimeout: clearShutdownTimeout = cancelTimeout,
     closeDatabase,
+    closeTracing,
     drainMs,
     exit,
     log,
@@ -71,6 +74,7 @@ export function createShutdown(options: CreateShutdownOptions) {
     onDrainStart();
 
     completion = new Promise<void>((resolve) => {
+      let closing = false;
       let finished = false;
       let timer: ShutdownTimer | undefined;
       let drainTimer: ShutdownTimer | undefined;
@@ -83,21 +87,16 @@ export function createShutdown(options: CreateShutdownOptions) {
         }
       };
 
-      const finish = (exitCode: number): void => {
+      // Called by the timeout too: a stuck `closeTracing` must not keep the
+      // process alive past `timeoutMs`.
+      const complete = (exitCode: number): void => {
         if (finished) {
           return;
         }
         finished = true;
         clearTimers();
 
-        let finalExitCode = Math.max(exitCode, requestedExitCode);
-        try {
-          closeDatabase();
-        } catch (error) {
-          finalExitCode = 1;
-          log.error({ err: error }, "database close failed");
-        }
-
+        const finalExitCode = Math.max(exitCode, requestedExitCode);
         const logData = { exitCode: finalExitCode, reason: shutdownReason };
         if (finalExitCode === 0) {
           log.info(logData, "shutdown complete");
@@ -109,6 +108,34 @@ export function createShutdown(options: CreateShutdownOptions) {
         resolve();
       };
 
+      const finish = (exitCode: number): void => {
+        if (closing || finished) {
+          return;
+        }
+        closing = true;
+
+        let finalExitCode = exitCode;
+        try {
+          closeDatabase();
+        } catch (error) {
+          finalExitCode = 1;
+          log.error({ err: error }, "database close failed");
+        }
+
+        if (!closeTracing) {
+          complete(finalExitCode);
+          return;
+        }
+
+        closeTracing().then(
+          () => complete(finalExitCode),
+          (error: unknown) => {
+            log.error({ err: error }, "tracing close failed");
+            complete(1);
+          }
+        );
+      };
+
       timer = setShutdownTimeout(() => {
         log.error({ timeoutMs }, "forced exit after shutdown timeout");
         try {
@@ -116,7 +143,15 @@ export function createShutdown(options: CreateShutdownOptions) {
         } catch (error) {
           log.error({ err: error }, "failed to force-close HTTP connections");
         }
-        finish(1);
+        if (!closing) {
+          closing = true;
+          try {
+            closeDatabase();
+          } catch (error) {
+            log.error({ err: error }, "database close failed");
+          }
+        }
+        complete(1);
       }, timeoutMs);
       timer.unref?.();
 

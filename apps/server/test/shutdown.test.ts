@@ -7,7 +7,12 @@ const DRAIN_MS = 200;
 
 /** Drives shutdown by hand: no real timers, sockets, or process.exit. */
 function createHarness(
-  options: { closeDatabase?: () => void; drainMs?: number } = {}
+  options: {
+    closeDatabase?: () => void;
+    closeTracing?: () => Promise<void>;
+    drainMs?: number;
+    exit?: (code: number) => void;
+  } = {}
 ) {
   let finishHttpClose: (error?: Error) => void = () => undefined;
   const timers = new Map<number, () => void>();
@@ -19,12 +24,16 @@ function createHarness(
     closeAllConnections: vi.fn(),
   };
   const closeDatabase = vi.fn(options.closeDatabase ?? (() => undefined));
-  const exit = vi.fn<(code: number) => void>();
+  const closeTracing = options.closeTracing
+    ? vi.fn(options.closeTracing)
+    : undefined;
+  const exit = vi.fn((code: number) => options.exit?.(code));
   const onDrainStart = vi.fn();
 
   const shutdown = createShutdown({
     clearTimeout: () => undefined,
     closeDatabase,
+    closeTracing,
     drainMs: options.drainMs ?? 0,
     exit,
     log: { error: () => undefined, info: () => undefined },
@@ -39,6 +48,7 @@ function createHarness(
 
   return {
     closeDatabase,
+    closeTracing,
     exit,
     finishHttpClose: (error?: Error) => finishHttpClose(error),
     fireTimer: (milliseconds: number) => timers.get(milliseconds)?.(),
@@ -119,6 +129,50 @@ describe("shutdown", () => {
 
     const done = h.shutdown({ reason: "SIGTERM" });
     h.finishHttpClose();
+    await done;
+
+    expect(h.exit.mock.calls).toEqual([[1]]);
+  });
+
+  it("closes tracing after the database and before exit", async () => {
+    const order: string[] = [];
+    const h = createHarness({
+      closeDatabase: () => order.push("database"),
+      closeTracing: () => {
+        order.push("tracing");
+        return Promise.resolve();
+      },
+      exit: (code) => order.push(`exit:${code}`),
+    });
+
+    const done = h.shutdown({ reason: "SIGTERM" });
+    h.finishHttpClose();
+    await done;
+
+    expect(order).toEqual(["database", "tracing", "exit:0"]);
+  });
+
+  it("exits 1 when closing tracing fails", async () => {
+    const h = createHarness({
+      closeTracing: () => Promise.reject(new Error("flush failed")),
+    });
+
+    const done = h.shutdown({ reason: "SIGTERM" });
+    h.finishHttpClose();
+    await done;
+
+    expect(h.closeTracing).toHaveBeenCalledOnce();
+    expect(h.exit.mock.calls).toEqual([[1]]);
+  });
+
+  it("force-exits while tracing shutdown hangs", async () => {
+    const h = createHarness({
+      closeTracing: () => new Promise<void>(() => undefined),
+    });
+
+    const done = h.shutdown({ reason: "SIGTERM" });
+    h.finishHttpClose();
+    h.fireTimer(TIMEOUT_MS);
     await done;
 
     expect(h.exit.mock.calls).toEqual([[1]]);
