@@ -39,6 +39,7 @@ function ComboboxTrigger({
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
   return (
     <ComboboxPrimitive.Clear
+      aria-label="Clear"
       data-slot="combobox-clear"
       render={<InputGroupButton variant="ghost" size="icon-xs" />}
       className={cn(className)}
@@ -69,6 +70,7 @@ function ComboboxInput({
       <InputGroupAddon align="inline-end">
         {showTrigger && (
           <InputGroupButton
+            aria-label="Show options"
             size="icon-xs"
             variant="ghost"
             render={<ComboboxTrigger />}

@@ -17,6 +17,5 @@ export default defineConfig({
   out: "./drizzle",
   // Each module owns its tables (see src/testing.ts for the same convention).
   schema: "../../modules/*/src/schema.ts",
-  strict: true,
   verbose: true,
 });

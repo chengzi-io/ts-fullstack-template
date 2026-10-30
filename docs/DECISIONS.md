@@ -98,13 +98,18 @@ databases merge; a public-facing or multi-region product should use UUIDv7.
 Failed queries and mutations and route crashes all reach `reportError`
 (`apps/web/src/lib/report-error.ts`), once per error, with the request id.
 An error tracker plugs in there; features keep showing expected errors inline.
+The API marks a kernel domain error (`NotFoundError`, `ConflictError`,
+`InvalidReferenceError`) `data.expected`, and the query cache skips those;
+input that fails validation is not marked, since the web sending it is a bug.
 
 ## 14. One E2E test, of the critical flow
 
 Playwright runs the built server on a fresh temp database and the built web
-(`vite preview`): create an author, post for it, see the post. It is a CI job
-and `pnpm e2e`, never a cached Turbo task. Everything else stays in the
-faster integration tests.
+(`vite preview`): create an author, post for it, see the post. axe checks
+WCAG 2.1 A/AA at each step in the real browser, where contrast and rendered
+names can be measured (jsdom computes no styles). It is a CI job and
+`pnpm e2e`, never a cached Turbo task. Everything else stays in the faster
+integration tests.
 
 ## 15. Dependency audit blocks only what a PR introduces
 
@@ -124,6 +129,23 @@ resets a new project to 0.0.0 and has its first commit name the template's
 last release. "Use this template" copies `main`, which may be ahead of that
 tag, so `main` must stay usable between releases.
 
+## 17. Drizzle stays on its stable release line
+
+- **Decision:** `drizzle-orm` and `drizzle-kit` are pinned to the npm
+  `latest` release (0.45.x / 0.31.x), not the 1.0 release candidates.
+- **Why:** a template is copied into products, so it should not hand them a
+  pre-release. The 1.0 RC was in use since the first db commit with no
+  recorded reason, and nothing here needs it: the schema, queries,
+  `drizzle({ client })`, `dialect: "turso"`, and kit `push` / `generate` /
+  `migrate` / `check` / `export` all exist on stable.
+- **Consequences:** `createTestDb()` runs the SQL script from
+  `drizzle-kit export --sql` (the RC's `--output json` is not on stable).
+  `drizzle.config.ts` has no `strict: true`: on stable it confirms every
+  push, which fails without a TTY (`pnpm e2e`, CI); pushes that lose data
+  still ask. Migrations use stable's `drizzle/meta/_journal.json` layout.
+  Moving to 1.0 once it is stable is a deliberate upgrade (relational
+  queries v2, migration folder format), not a version bump.
+
 ## Not decided yet — add when a product needs it
 
 - CORS for several origins or with credentials; CORP tuned per API
@@ -135,5 +157,6 @@ tag, so `main` must stay usable between releases.
 
 ## Out of scope for the template
 
-Auth implementations; audit log, event bus, job queue; cloud, container, or
-reverse-proxy specifics; rate-limit numbers without real traffic targets.
+Auth implementations; audit log, event bus, job queue; cloud, orchestration,
+or reverse-proxy specifics (`apps/server/Dockerfile` is a platform-neutral
+image, nothing more); rate-limit numbers without real traffic targets.

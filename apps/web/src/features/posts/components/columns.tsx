@@ -11,7 +11,10 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 
-import { ColumnHeader } from "@/components/blocks/data-table.tsx";
+import {
+  ColumnHeader,
+  type DataTableFeatures,
+} from "@/components/blocks/data-table.tsx";
 
 export type Post = RouterOutputs["posts"]["list"]["items"][number];
 
@@ -68,7 +71,7 @@ function PostRowActions({
 export function createPostColumns(handlers: {
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
-}): ColumnDef<Post>[] {
+}): ColumnDef<DataTableFeatures, Post>[] {
   return [
     {
       accessorKey: "title",

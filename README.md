@@ -14,8 +14,8 @@
   <a href="https://github.com/chengzi-io/ts-fullstack-template/actions/workflows/ci.yml"><img src="https://github.com/chengzi-io/ts-fullstack-template/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <a href="https://github.com/chengzi-io/ts-fullstack-template/releases"><img src="https://img.shields.io/github/v/release/chengzi-io/ts-fullstack-template" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/chengzi-io/ts-fullstack-template" alt="License"></a>
-  <img src="https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node 22 or later">
-  <img src="https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white" alt="pnpm 10">
+  <img src="https://img.shields.io/badge/node-%3E%3D24-339933?logo=node.js&logoColor=white" alt="Node 24 or later">
+  <img src="https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white" alt="pnpm 12">
 </p>
 
 <!-- template-only -->
@@ -63,7 +63,7 @@ Every tool, its role, and where it lives: [docs/STACK.md](docs/STACK.md).
 
 ## Quick start
 
-Needs Node 22 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS,
+Needs Node 24 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS,
 Linux, or WSL on Windows).
 
 ```bash
