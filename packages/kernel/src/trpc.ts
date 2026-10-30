@@ -20,6 +20,8 @@ const t = initTRPC.context<Context>().create({
       ...shape,
       data: {
         ...shape.data,
+        // A domain failure is an outcome the web shows inline, not a bug to report.
+        expected: domainErrorCode(error.cause) !== null,
         requestId: ctx?.requestId ?? null,
         zodError,
       },

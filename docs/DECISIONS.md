@@ -98,6 +98,9 @@ databases merge; a public-facing or multi-region product should use UUIDv7.
 Failed queries and mutations and route crashes all reach `reportError`
 (`apps/web/src/lib/report-error.ts`), once per error, with the request id.
 An error tracker plugs in there; features keep showing expected errors inline.
+The API marks a kernel domain error (`NotFoundError`, `ConflictError`,
+`InvalidReferenceError`) `data.expected`, and the query cache skips those;
+input that fails validation is not marked, since the web sending it is a bug.
 
 ## 14. One E2E test, of the critical flow
 

@@ -140,8 +140,25 @@ describe("error contract", () => {
     expect(res.status).toBe(400);
     expect(body.error.json.data).toMatchObject({
       code: "BAD_REQUEST",
+      expected: false,
       requestId: res.headers.get("x-request-id"),
       zodError: { fieldErrors: { name: expect.any(Array) } },
+    });
+  });
+
+  it("marks a domain failure as expected, for the web to show inline", async () => {
+    const res = await postJson(
+      "/trpc/conflict",
+      JSON.stringify({ json: null })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error.json.message).toBe("Thing is still in use");
+    expect(body.error.json.data).toMatchObject({
+      code: "CONFLICT",
+      expected: true,
+      requestId: res.headers.get("x-request-id"),
     });
   });
 
@@ -158,6 +175,7 @@ describe("error contract", () => {
     expect(body.error.json.message).toBe("Internal server error");
     expect(body.error.json.data).toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
+      expected: false,
       requestId: res.headers.get("x-request-id"),
     });
   });
