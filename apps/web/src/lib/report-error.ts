@@ -15,6 +15,17 @@ export function requestIdOf(error: unknown): string | null {
 }
 
 /**
+ * The API marks a domain failure (a missing row, a conflict, an unknown
+ * reference) `expected`: the feature that made the call shows it inline.
+ */
+export function isExpectedError(error: unknown): boolean {
+  // Duck-typed like requestIdOf.
+  const expected = (error as { data?: { expected?: unknown } } | null)?.data
+    ?.expected;
+  return expected === true;
+}
+
+/**
  * The single place the app reports an unexpected error — a failed query or
  * mutation, or one a route error boundary caught. Features keep showing
  * expected errors inline; this is only for the ones nobody planned for.
