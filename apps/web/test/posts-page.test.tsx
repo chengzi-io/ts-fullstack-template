@@ -208,8 +208,9 @@ it("keeps the picked author when the input is retyped and left without a pick", 
   const input = await pickAuthor(user, dialog, "Ad", "Ada");
 
   await user.click(input);
-  await user.keyboard("{Control>}a{/Control}");
-  await user.type(input, "Bo");
+  // Not `user.type`: it clicks first, and the click drops the selection.
+  await user.keyboard("{Control>}a{/Control}Bo");
+  expect((input as HTMLInputElement).value).toBe("Bo");
   await screen.findByRole("option", { name: "Bob" });
   await user.click(within(dialog).getByLabelText("Title"));
 
