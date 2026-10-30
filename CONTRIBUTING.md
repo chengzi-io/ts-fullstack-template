@@ -84,9 +84,9 @@ instead of relying on a summary here.
 Releases come from the **release-please Release PR**. Merging a Conventional
 Commit into `main` makes `.github/workflows/release.yml` open or update a PR
 that bumps the version, writes `CHANGELOG.md`, and tags the merge. Nothing is
-published to a registry — the template is private and has no package to ship.
-Merging the Release PR is the release; do not bump versions or write the
-changelog by hand.
+published to a registry — the template has no package to ship; the tag and its
+GitHub Release are the release. Merging the Release PR makes them; do not bump
+versions or write the changelog by hand.
 
 ## Dependency audits
 

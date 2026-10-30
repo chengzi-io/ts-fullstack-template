@@ -38,6 +38,7 @@ function AuthorsPage() {
     pageSize: search.pageSize,
     q,
   });
+  const { refetch } = authorsQuery;
   const { openCreate, openEdit } = useAuthorActions();
   const deleteMutation = useDeleteAuthorMutation();
   // Page-local: delete confirm does not need global/cross-route coordination.
@@ -83,9 +84,10 @@ function AuthorsPage() {
   );
 
   const handleRetry = useCallback(() => {
-    authorsQuery.refetch().catch(() => undefined);
-  }, [authorsQuery]);
+    refetch();
+  }, [refetch]);
 
+  // openCreate takes options; a click must not pass its event as them.
   const handleNew = useCallback(() => {
     openCreate();
   }, [openCreate]);
@@ -120,10 +122,7 @@ function AuthorsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Full CRUD via tRPC. Paging and search run on the server and live in the URL. Delete is blocked while the author still has posts."
-        title="Authors"
-      />
+      <PageHeader description="People who write posts." title="Authors" />
 
       {authorsQuery.isPending ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
@@ -177,7 +176,7 @@ function AuthorsPage() {
 
       <DeleteConfirmDialog
         busy={deleteMutation.isPending}
-        description="Blocked if this author still has posts (FK restrict)."
+        description="This cannot be undone. Authors with posts can't be deleted."
         errorMessage={deleteMutation.error?.message}
         onConfirm={handleDeleteConfirm}
         onOpenChange={handleDeleteOpenChange}

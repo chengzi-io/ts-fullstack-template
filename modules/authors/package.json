@@ -14,14 +14,14 @@
     "./schema": "./src/schema.ts"
   },
   "dependencies": {
-    "@trpc/server": "^11.18.0",
+    "@trpc/server": "^11.22.1",
     "@workspace/db": "workspace:*",
     "@workspace/kernel": "workspace:*",
-    "drizzle-orm": "1.0.0-rc.4",
+    "drizzle-orm": "0.45.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
+    "@types/node": "^24.19.2",
     "typescript": "~7.0.2"
   }
 }

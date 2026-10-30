@@ -23,7 +23,7 @@ Workspace map: root `AGENTS.md`. Routers: `@workspace/api`. Data: `@workspace/db
 - `DATABASE_*` live in `packages/db/.env` (or platform), **not** `apps/server/.env`
 - Scripts: `--env-file-if-exists=../../packages/db/.env --env-file-if-exists=.env`
 - Never log `DATABASE_AUTH_TOKEN`
-- Build: `tsup` bundles `@workspace/*`; keep `@libsql/client` external
+- Build: `tsdown` bundles `@workspace/*` and their dependencies; keep `@libsql/client` external
 
 ## This package’s edge
 
@@ -62,7 +62,7 @@ test/
   env.test.ts           fail-fast config
   logger.test.ts        redaction
   tracing.test.ts       spans, trace ids in logs, resource
-tsup.config.ts
+tsdown.config.ts
 scripts/smoke-build.mjs
 ```
 
@@ -84,7 +84,7 @@ is imported and the API stays no-op. `@hono/otel` is the first middleware;
 `lib/logger.ts` adds `trace_id` / `span_id` / `trace_flags` to every line from
 the active span.
 
-No auto-instrumentation: `tsup` emits an ESM bundle, so the usual
+No auto-instrumentation: `tsdown` emits an ESM bundle, so the usual
 `--require`/`--import` patches of `http` and friends do not apply here.
 
 ## Middleware order
