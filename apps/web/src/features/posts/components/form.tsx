@@ -16,7 +16,7 @@ import {
   FieldLabel,
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { cn } from "@workspace/ui/lib/utils";
+import { Textarea } from "@workspace/ui/components/textarea";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -25,9 +25,6 @@ import {
   postFormDefaults,
   postFormSchema,
 } from "../model/form.ts";
-
-const controlClassName =
-  "w-full rounded-2xl border border-transparent bg-input/50 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive";
 
 interface AuthorComboboxProps {
   authors: AuthorSummary[];
@@ -201,13 +198,12 @@ export function PostForm({
 
         <Field data-invalid={!!errors.body}>
           <FieldLabel htmlFor="post-body">Body</FieldLabel>
-          <textarea
+          <Textarea
             aria-invalid={!!errors.body}
-            className={cn(controlClassName, "px-2.5 py-2")}
+            className="min-h-24"
             disabled={busy}
             id="post-body"
             placeholder="Optional. Max 5000 characters."
-            rows={4}
             {...register("body")}
           />
           <FieldError errors={[errors.body]} />
