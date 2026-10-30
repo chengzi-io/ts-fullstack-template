@@ -1,21 +1,11 @@
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
-  type VisibilityState,
+  type RowData,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import { Button } from "@workspace/ui/components/button";
-import { Checkbox } from "@workspace/ui/components/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
 import { Input } from "@workspace/ui/components/input";
 import {
   Select,
@@ -33,28 +23,20 @@ import {
   TableRow,
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Columns3Icon,
-  SearchIcon,
-} from "lucide-react";
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
+import { type ChangeEvent, type ReactNode, useCallback } from "react";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50] as const;
 
-export interface DataTableProps<TData> {
-  /** Labels for the column visibility menu (fallback: column id). */
-  columnLabels?: Record<string, string>;
+// No optional features: the server pages and searches, so the table only
+// renders the rows it is handed.
+const dataTableFeatures = tableFeatures({});
+export type DataTableFeatures = typeof dataTableFeatures;
+
+export interface DataTableProps<TData extends RowData> {
   // createColumnHelper yields mixed TValue columns.
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous column value types
-  columns: ColumnDef<TData, any>[];
+  columns: ColumnDef<DataTableFeatures, TData, any>[];
   /** The current page's rows only — paging and search happen on the server. */
   data: TData[];
   emptyMessage?: string;
@@ -68,7 +50,7 @@ export interface DataTableProps<TData> {
   pageSize: number;
   search?: string;
   searchPlaceholder?: string;
-  /** Extra controls on the right of the toolbar (after View). */
+  /** Extra controls on the right of the toolbar. */
   toolbarEnd?: ReactNode;
   /** Rows across every page. */
   total: number;
@@ -80,76 +62,6 @@ export function ColumnHeader({ title }: { title: string }) {
     <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       {title}
     </span>
-  );
-}
-
-function SelectRowCheckbox({
-  selected,
-  toggle,
-}: {
-  selected: boolean;
-  toggle: (value: boolean) => void;
-}) {
-  const handleChange = useCallback(
-    (checked: boolean | "indeterminate") => {
-      toggle(checked === true);
-    },
-    [toggle]
-  );
-
-  return (
-    <Checkbox
-      aria-label="Select row"
-      checked={selected}
-      onCheckedChange={handleChange}
-    />
-  );
-}
-
-function SelectPageCheckbox({
-  checked,
-  toggleAll,
-}: {
-  checked: boolean | "indeterminate";
-  toggleAll: (value: boolean) => void;
-}) {
-  const handleChange = useCallback(
-    (value: boolean | "indeterminate") => {
-      toggleAll(value === true);
-    },
-    [toggleAll]
-  );
-
-  return (
-    <Checkbox
-      aria-label="Select all rows on this page"
-      checked={checked === true}
-      indeterminate={checked === "indeterminate"}
-      onCheckedChange={handleChange}
-    />
-  );
-}
-
-function ColumnVisibilityItem({
-  checked,
-  label,
-  onToggle,
-}: {
-  checked: boolean;
-  label: string;
-  onToggle: (visible: boolean) => void;
-}) {
-  const handleChange = useCallback(
-    (value: boolean | "indeterminate") => {
-      onToggle(value === true);
-    },
-    [onToggle]
-  );
-
-  return (
-    <DropdownMenuCheckboxItem checked={checked} onCheckedChange={handleChange}>
-      {label}
-    </DropdownMenuCheckboxItem>
   );
 }
 
@@ -195,42 +107,12 @@ function PageSizeSelect({
   );
 }
 
-/** Optional first column for row selection (page-scoped). */
-export function createSelectColumn<TData>(): ColumnDef<TData, unknown> {
-  return {
-    cell: ({ row }) => (
-      <SelectRowCheckbox
-        selected={row.getIsSelected()}
-        toggle={row.toggleSelected}
-      />
-    ),
-    enableHiding: false,
-    header: ({ table }) => {
-      let checked: boolean | "indeterminate" = false;
-      if (table.getIsAllPageRowsSelected()) {
-        checked = true;
-      } else if (table.getIsSomePageRowsSelected()) {
-        checked = "indeterminate";
-      }
-      return (
-        <SelectPageCheckbox
-          checked={checked}
-          toggleAll={table.toggleAllPageRowsSelected}
-        />
-      );
-    },
-    id: "select",
-  };
-}
-
 /**
- * Reusable data table shell (from shadcn/registry data-table), adapted for the
- * app: server-driven paging and search, column visibility, page-scoped
- * selection. It never sorts or filters rows itself — that would only reorder
- * the one page it holds.
+ * Reusable data table shell, adapted for the app: server-driven paging and
+ * search. It never sorts or filters rows itself — that would only reorder the
+ * one page it holds.
  */
-export function DataTable<TData>({
-  columnLabels = {},
+export function DataTable<TData extends RowData>({
   columns,
   data,
   emptyMessage = "No results.",
@@ -245,23 +127,11 @@ export function DataTable<TData>({
   toolbarEnd,
   total,
 }: DataTableProps<TData>) {
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-
-  const table = useReactTable({
+  const table = useTable({
     columns,
     data,
-    getCoreRowModel: getCoreRowModel(),
+    features: dataTableFeatures,
     getRowId,
-    manualPagination: true,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    rowCount: total,
-    state: {
-      columnVisibility,
-      pagination: { pageIndex: page - 1, pageSize },
-      rowSelection,
-    },
   });
 
   const handleSearchChange = useCallback(
@@ -281,12 +151,6 @@ export function DataTable<TData>({
 
   const { rows } = table.getRowModel();
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  const selectedCount = Object.keys(rowSelection).length;
-
-  const hideableColumns = useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanHide()),
-    [table]
-  );
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -309,37 +173,6 @@ export function DataTable<TData>({
         ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {hideableColumns.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    aria-label="Toggle columns"
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <Columns3Icon aria-hidden className="size-3.5" />
-                    View
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {hideableColumns.map((column) => (
-                    <ColumnVisibilityItem
-                      checked={column.getIsVisible()}
-                      key={column.id}
-                      label={columnLabels[column.id] ?? column.id}
-                      onToggle={column.toggleVisibility}
-                    />
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
           {toolbarEnd}
         </div>
       </div>
@@ -356,7 +189,6 @@ export function DataTable<TData>({
                   <TableHead
                     className={cn(
                       "h-9",
-                      header.column.id === "select" && "w-10 pl-4",
                       header.column.id === "actions" && "w-10 pr-4"
                     )}
                     key={header.id}
@@ -377,14 +209,12 @@ export function DataTable<TData>({
               rows.map((row) => (
                 <TableRow
                   className="border-border border-b transition-colors duration-100 last:border-b-0 hover:bg-muted/30"
-                  data-state={row.getIsSelected() ? "selected" : undefined}
                   key={row.id}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getAllCells().map((cell) => (
                     <TableCell
                       className={cn(
                         "py-3",
-                        cell.column.id === "select" && "pl-4",
                         cell.column.id === "actions" && "pr-4"
                       )}
                       key={cell.id}
@@ -416,15 +246,6 @@ export function DataTable<TData>({
               {total}
             </span>{" "}
             {total === 1 ? "result" : "results"}
-            {selectedCount > 0 ? (
-              <>
-                {" · "}
-                <span className="font-medium text-foreground tabular-nums">
-                  {selectedCount}
-                </span>{" "}
-                selected
-              </>
-            ) : null}
           </p>
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">

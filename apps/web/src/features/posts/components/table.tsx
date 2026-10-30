@@ -7,7 +7,7 @@ import {
   type DataTableProps,
 } from "@/components/blocks/data-table.tsx";
 
-import { createPostColumns, type Post, postColumnLabels } from "./columns.tsx";
+import { createPostColumns, type Post } from "./columns.tsx";
 
 function getPostRowId(row: Post) {
   return String(row.id);
@@ -46,7 +46,6 @@ export function PostsTable({
   return (
     <DataTable
       {...paging}
-      columnLabels={postColumnLabels}
       columns={columns}
       emptyMessage="No posts match your search."
       getRowId={getPostRowId}

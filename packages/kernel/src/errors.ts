@@ -1,6 +1,7 @@
 /**
  * Expected failures a repo throws. The API maps each class to one tRPC code
- * in a single middleware, so routers carry no error handling.
+ * in a single middleware, so routers carry no error handling, and marks the
+ * error `data.expected` so the web shows it inline instead of reporting it.
  */
 
 /** The addressed row does not exist. → NOT_FOUND */
