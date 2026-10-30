@@ -54,8 +54,8 @@ importers:
         specifier: ^0.4.2
         version: 0.4.2(@trpc/server@11.18.0(typescript@6.0.3))(hono@4.13.11)
       '@libsql/client':
-        specifier: ^0.17.4
-        version: 0.17.4
+        specifier: ^0.18.0
+        version: 0.18.0
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -234,7 +234,7 @@ importers:
         version: link:../../packages/kernel
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)
+        version: 0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -262,7 +262,7 @@ importers:
         version: link:../../packages/kernel
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)
+        version: 0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -299,11 +299,11 @@ importers:
   packages/db:
     dependencies:
       '@libsql/client':
-        specifier: ^0.17.4
-        version: 0.17.4
+        specifier: ^0.18.0
+        version: 0.18.0
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)
+        version: 0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)
     devDependencies:
       '@types/node':
         specifier: ^22.20.1
@@ -1549,11 +1549,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@libsql/client@0.17.4':
-    resolution: {integrity: sha512-lYayFWasDV78A+TjlEhr6ubb3odBV6OHjb+wdp8VQcyWWAEIjuwbCHaraEUS4m4yWoo0BvZo96It4VdzZRmRWw==}
+  '@libsql/client@0.18.0':
+    resolution: {integrity: sha512-zMCCo58vv7w27j7+cnt/GW+X6/Rih6cHZ86PKi0AxCMOqMfrVgG9OZ5lW2bDMJhSeOjsv2szH2nJF3A9l36UmA==}
 
-  '@libsql/core@0.17.4':
-    resolution: {integrity: sha512-LqF9gIvnJ38nmAH1y/ChizHqDO/MO1wLgA96XrraulEEbqXxLjleSH92YWTolbuJKgPUmGu4aJk9W3UnAcxLOQ==}
+  '@libsql/core@0.18.0':
+    resolution: {integrity: sha512-N8RR2CIpcgtbKZnXs2KVpw2lJQfinUj3I56e7qRDRpK18Hty0Rr8nr00VmFb4R/DsqOanPB/TaP3+QAQLZeXMg==}
 
   '@libsql/darwin-arm64@0.5.29':
     resolution: {integrity: sha512-K+2RIB1OGFPYQbfay48GakLhqf3ArcbHqPFu7EZiaUcRgFcdw8RoltsMyvbj5ix2fY0HV3Q3Ioa/ByvQdaSM0A==}
@@ -5549,9 +5549,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@libsql/client@0.17.4':
+  '@libsql/client@0.18.0':
     dependencies:
-      '@libsql/core': 0.17.4
+      '@libsql/core': 0.18.0
       '@libsql/hrana-client': 0.10.0
       js-base64: 3.9.0
       libsql: 0.5.29
@@ -5560,7 +5560,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@libsql/core@0.17.4':
+  '@libsql/core@0.18.0':
     dependencies:
       js-base64: 3.9.0
 
@@ -6596,9 +6596,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.1
 
-  drizzle-orm@0.45.4(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1):
+  drizzle-orm@0.45.4(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1):
     optionalDependencies:
-      '@libsql/client': 0.17.4
+      '@libsql/client': 0.18.0
       '@opentelemetry/api': 1.9.1
 
   electron-to-chromium@1.5.467: {}
