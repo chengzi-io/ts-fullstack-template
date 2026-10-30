@@ -11,18 +11,9 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 
-import {
-  ColumnHeader,
-  createSelectColumn,
-} from "@/components/blocks/data-table.tsx";
+import { ColumnHeader } from "@/components/blocks/data-table.tsx";
 
 export type Author = RouterOutputs["authors"]["list"]["items"][number];
-
-export const authorColumnLabels: Record<string, string> = {
-  createdAt: "Created",
-  id: "ID",
-  name: "Name",
-};
 
 function AuthorRowActions({
   id,
@@ -79,7 +70,6 @@ export function createAuthorColumns(handlers: {
   onEdit: (id: number) => void;
 }): ColumnDef<Author>[] {
   return [
-    createSelectColumn<Author>(),
     {
       accessorKey: "name",
       cell: ({ row }) => (
@@ -114,7 +104,6 @@ export function createAuthorColumns(handlers: {
           onEdit={handlers.onEdit}
         />
       ),
-      enableHiding: false,
       header: () => <span className="sr-only">Actions</span>,
       id: "actions",
     },
