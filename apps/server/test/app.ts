@@ -1,4 +1,5 @@
 import { createTestDb } from "@workspace/db/testing";
+import { ConflictError } from "@workspace/kernel/errors";
 import { createTRPCRouter, publicProcedure } from "@workspace/kernel/trpc";
 import { z } from "zod";
 
@@ -7,6 +8,9 @@ import { createLogger } from "../src/lib/logger.js";
 
 /** Host tests stay independent of business modules. */
 const testRouter = createTRPCRouter({
+  conflict: publicProcedure.mutation(() => {
+    throw new ConflictError("Thing is still in use");
+  }),
   echo: publicProcedure
     .input(z.object({ name: z.string().trim().min(1) }))
     .mutation(({ input }) => input),

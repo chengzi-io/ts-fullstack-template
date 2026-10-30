@@ -13,17 +13,10 @@ import { useCallback } from "react";
 
 import {
   ColumnHeader,
-  createSelectColumn,
+  type DataTableFeatures,
 } from "@/components/blocks/data-table.tsx";
 
 export type Post = RouterOutputs["posts"]["list"]["items"][number];
-
-export const postColumnLabels: Record<string, string> = {
-  authorName: "Author",
-  body: "Body",
-  createdAt: "Created",
-  title: "Title",
-};
 
 function PostRowActions({
   id,
@@ -78,9 +71,8 @@ function PostRowActions({
 export function createPostColumns(handlers: {
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
-}): ColumnDef<Post>[] {
+}): ColumnDef<DataTableFeatures, Post>[] {
   return [
-    createSelectColumn<Post>(),
     {
       accessorKey: "title",
       cell: ({ row }) => (
@@ -125,7 +117,6 @@ export function createPostColumns(handlers: {
           title={row.original.title}
         />
       ),
-      enableHiding: false,
       header: () => <span className="sr-only">Actions</span>,
       id: "actions",
     },

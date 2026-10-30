@@ -149,6 +149,7 @@ it("creates the first post, creating its author on the way", async () => {
   const postDialog = await screen.findByRole("dialog", { name: "New post" });
   await pickAuthor(user, postDialog, "Ada", "Ada");
   await user.type(await within(postDialog).findByLabelText("Title"), "Hello");
+  await user.type(within(postDialog).getByLabelText("Body"), "First words");
   await user.click(
     within(postDialog).getByRole("button", { name: "Create post" })
   );
@@ -158,7 +159,7 @@ it("creates the first post, creating its author on the way", async () => {
   });
   expect(await screen.findByText("Hello")).toBeTruthy();
   expect(backend.posts).toMatchObject([
-    { author: { name: "Ada" }, title: "Hello" },
+    { author: { name: "Ada" }, body: "First words", title: "Hello" },
   ]);
 });
 
