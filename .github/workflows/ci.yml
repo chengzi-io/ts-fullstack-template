@@ -48,6 +48,8 @@ jobs:
             apps/server/dist
             apps/web/dist
           if-no-files-found: error
+          # Artifacts are immutable; a re-run of verify uploads the name again.
+          overwrite: true
           retention-days: 1
 
   e2e:
