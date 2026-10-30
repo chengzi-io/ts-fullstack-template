@@ -1,8 +1,9 @@
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  type RowData,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -27,10 +28,15 @@ import { type ChangeEvent, type ReactNode, useCallback } from "react";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50] as const;
 
-export interface DataTableProps<TData> {
+// No optional features: the server pages and searches, so the table only
+// renders the rows it is handed.
+const dataTableFeatures = tableFeatures({});
+export type DataTableFeatures = typeof dataTableFeatures;
+
+export interface DataTableProps<TData extends RowData> {
   // createColumnHelper yields mixed TValue columns.
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous column value types
-  columns: ColumnDef<TData, any>[];
+  columns: ColumnDef<DataTableFeatures, TData, any>[];
   /** The current page's rows only — paging and search happen on the server. */
   data: TData[];
   emptyMessage?: string;
@@ -106,7 +112,7 @@ function PageSizeSelect({
  * search. It never sorts or filters rows itself — that would only reorder the
  * one page it holds.
  */
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   emptyMessage = "No results.",
@@ -121,16 +127,11 @@ export function DataTable<TData>({
   toolbarEnd,
   total,
 }: DataTableProps<TData>) {
-  const table = useReactTable({
+  const table = useTable({
     columns,
     data,
-    getCoreRowModel: getCoreRowModel(),
+    features: dataTableFeatures,
     getRowId,
-    manualPagination: true,
-    rowCount: total,
-    state: {
-      pagination: { pageIndex: page - 1, pageSize },
-    },
   });
 
   const handleSearchChange = useCallback(
@@ -210,7 +211,7 @@ export function DataTable<TData>({
                   className="border-border border-b transition-colors duration-100 last:border-b-0 hover:bg-muted/30"
                   key={row.id}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getAllCells().map((cell) => (
                     <TableCell
                       className={cn(
                         "py-3",

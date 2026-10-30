@@ -4,6 +4,7 @@ Database plumbing shared by every module: the client, the transaction-aware
 `Executor` type, constraint helpers, the test database, and drizzle-kit
 config + migrations. **Tables and queries live in `modules/<domain>`**, not here.
 No Hono / tRPC / React. No `process.env` inside `createDb`.
+Drizzle is the stable release line, pinned exactly — not 1.0 RC (DECISIONS #17).
 
 ## Public surface
 
@@ -74,7 +75,7 @@ mostly inside this package. What is SQLite / libSQL specific today:
 | `src/testing.ts` | `drizzle-kit export --dialect turso`, a temp file, `$client.batch` | a throwaway database or schema per test (or PGlite), created and dropped in `createTestDb` |
 | `modules/*/src/schema.ts` | `sqliteTable`, `int({ mode: "timestamp_ms" })`, autoincrement | `pgTable`, `timestamp`, identity / UUID columns |
 | `apps/server/src/env.ts` | accepted URL schemes; the `file:` single-instance guard | the new schemes; drop the guard if there is no file mode |
-| `apps/server` `package.json` + `tsup.config.ts` | `@libsql/client` is a runtime dependency kept `external` (the bundle inlines `@workspace/*`, not native drivers) | the same for the new driver |
+| `apps/server` `package.json` + `tsdown.config.ts` | `@libsql/client` is a runtime dependency kept `external` (the bundle inlines `@workspace/*`, not native drivers) | the same for the new driver |
 
 Then: regenerate migrations (the demo has none), keep the module tests
 green — they assert behavior (409 on a restricted delete, 400 on a missing
