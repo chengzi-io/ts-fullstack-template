@@ -7,11 +7,7 @@ import {
   type DataTableProps,
 } from "@/components/blocks/data-table.tsx";
 
-import {
-  type Author,
-  authorColumnLabels,
-  createAuthorColumns,
-} from "./columns.tsx";
+import { type Author, createAuthorColumns } from "./columns.tsx";
 
 function getAuthorRowId(row: Author) {
   return String(row.id);
@@ -50,7 +46,6 @@ export function AuthorsTable({
   return (
     <DataTable
       {...paging}
-      columnLabels={authorColumnLabels}
       columns={columns}
       emptyMessage="No authors match your search."
       getRowId={getAuthorRowId}
