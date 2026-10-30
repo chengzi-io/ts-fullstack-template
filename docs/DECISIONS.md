@@ -102,9 +102,11 @@ An error tracker plugs in there; features keep showing expected errors inline.
 ## 14. One E2E test, of the critical flow
 
 Playwright runs the built server on a fresh temp database and the built web
-(`vite preview`): create an author, post for it, see the post. It is a CI job
-and `pnpm e2e`, never a cached Turbo task. Everything else stays in the
-faster integration tests.
+(`vite preview`): create an author, post for it, see the post. axe checks
+WCAG 2.1 A/AA at each step in the real browser, where contrast and rendered
+names can be measured (jsdom computes no styles). It is a CI job and
+`pnpm e2e`, never a cached Turbo task. Everything else stays in the faster
+integration tests.
 
 ## 15. Dependency audit blocks only what a PR introduces
 
