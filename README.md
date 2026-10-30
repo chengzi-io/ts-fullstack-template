@@ -59,6 +59,8 @@ work is checked by tools rather than by review alone:
 | Observability | pino logs with redaction, request ids end to end, opt-in OpenTelemetry tracing |
 | Repository | pnpm workspaces, Turborepo, lefthook, commitlint, release-please, Dependabot |
 
+Every tool, its role, and where it lives: [docs/STACK.md](docs/STACK.md).
+
 ## Quick start
 
 Needs Node 24 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS,
@@ -140,6 +142,7 @@ migrations. Remove it with [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md).
 
 - [AGENTS.md](AGENTS.md) and each package's `AGENTS.md` — boundaries and rules for humans and agents
 - [docs/DECISIONS.md](docs/DECISIONS.md) — why it is shaped this way, and what is still open
+- [docs/STACK.md](docs/STACK.md) — every tool, its role, and where it lives
 - [apps/server/README.md](apps/server/README.md) — production build, env, probes, shutdown
 
 ## Contributing
