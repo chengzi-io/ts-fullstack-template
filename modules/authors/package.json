@@ -14,7 +14,7 @@
     "./schema": "./src/schema.ts"
   },
   "dependencies": {
-    "@trpc/server": "^11.18.0",
+    "@trpc/server": "^11.22.1",
     "@workspace/db": "workspace:*",
     "@workspace/kernel": "workspace:*",
     "drizzle-orm": "0.45.4",
@@ -22,6 +22,6 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "typescript": "~6"
+    "typescript": "~6.0.3"
   }
 }
