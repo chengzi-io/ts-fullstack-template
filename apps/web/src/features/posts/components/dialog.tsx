@@ -32,13 +32,13 @@ type Post = RouterOutputs["posts"]["byId"];
 function postDialogCopy(isEdit: boolean) {
   if (isEdit) {
     return {
-      description: "Update fields via tRPC posts.update.",
+      description: "Update the title, body, or author.",
       submitLabel: "Save changes",
       title: "Edit post",
     };
   }
   return {
-    description: "Create via tRPC. Missing author uses Zustand resume flow.",
+    description: "Write a post and pick its author.",
     submitLabel: "Create post",
     title: "New post",
   };
@@ -49,7 +49,7 @@ function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
     <div className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/30 px-4 py-4">
       <p className="font-medium text-sm">Create an author first</p>
       <p className="text-muted-foreground text-sm">
-        Opens author dialog; after success, this post dialog reopens.
+        Every post needs an author. You'll come back here after creating one.
       </p>
       <Button className="self-start" onClick={onCreateAuthor} type="button">
         Create author

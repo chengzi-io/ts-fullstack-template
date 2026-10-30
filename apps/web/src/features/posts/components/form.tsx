@@ -11,7 +11,6 @@ import {
 } from "@workspace/ui/components/combobox";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -177,6 +176,7 @@ export function PostForm({
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit}>
       <FieldGroup>
+        {/* Real apps take the author from the session; the template has no auth. */}
         <Field data-invalid={!!errors.authorId}>
           <FieldLabel htmlFor="post-author">Author</FieldLabel>
           <Controller
@@ -184,10 +184,6 @@ export function PostForm({
             name="authorId"
             render={renderAuthor}
           />
-          <FieldDescription>
-            Type to search all authors. Real apps usually take the author from
-            the session.
-          </FieldDescription>
           <FieldError errors={[errors.authorId]} />
         </Field>
 
@@ -210,11 +206,10 @@ export function PostForm({
             className={cn(controlClassName, "px-2.5 py-2")}
             disabled={busy}
             id="post-body"
-            placeholder="Optional"
+            placeholder="Optional. Max 5000 characters."
             rows={4}
             {...register("body")}
           />
-          <FieldDescription>Optional. Max 5000 characters.</FieldDescription>
           <FieldError errors={[errors.body]} />
         </Field>
       </FieldGroup>
