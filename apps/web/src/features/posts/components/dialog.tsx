@@ -50,8 +50,8 @@ function postDialogCopy(isEdit: boolean) {
 
 function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/30 px-4 py-4">
-      <p className="font-medium text-sm">Create an author first</p>
+    <div className="bg-muted/30 flex flex-col gap-3 rounded-2xl border border-dashed px-4 py-4">
+      <p className="text-sm font-medium">Create an author first</p>
       <p className="text-muted-foreground text-sm">
         Every post needs an author. You'll come back here after creating one.
       </p>

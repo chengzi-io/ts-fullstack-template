@@ -93,7 +93,7 @@ export function createPostColumns(handlers: {
     {
       accessorKey: "body",
       cell: ({ row }) => (
-        <span className="line-clamp-1 text-muted-foreground">
+        <span className="text-muted-foreground line-clamp-1">
           {row.original.body || "—"}
         </span>
       ),

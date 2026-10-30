@@ -110,12 +110,13 @@ const serverProcess = spawn(
 );
 const serverExited = once(serverProcess, "exit");
 let output = "";
+const appendOutput = (chunk) => {
+  output += chunk;
+};
 
 for (const stream of [serverProcess.stdout, serverProcess.stderr]) {
   stream.setEncoding("utf8");
-  stream.on("data", (chunk) => {
-    output += chunk;
-  });
+  stream.on("data", appendOutput);
 }
 
 try {

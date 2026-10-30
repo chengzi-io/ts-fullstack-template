@@ -1,4 +1,4 @@
-const TRAILING_SLASH = /\/$/;
+const TRAILING_SLASH = /\/$/u;
 
 function readTrpcUrl(): string {
   const value = import.meta.env.VITE_TRPC_URL;

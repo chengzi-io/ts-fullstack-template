@@ -15,9 +15,9 @@ function HomePage() {
         title="Full-stack TypeScript template"
       />
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-dashed bg-muted/30 px-5 py-6">
-        <h2 className="font-medium text-sm">Try the demo</h2>
-        <p className="max-w-prose text-muted-foreground text-sm leading-relaxed">
+      <div className="bg-muted/30 flex flex-col gap-3 rounded-2xl border border-dashed px-5 py-6">
+        <h2 className="text-sm font-medium">Try the demo</h2>
+        <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
           Authors and posts: domain Zod, FK joins, tRPC + Query, create Dialogs,
           and Zustand for client UI intent (e.g. resume post create after author
           create). Server data stays in Query — not in the store.

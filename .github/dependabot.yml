@@ -20,7 +20,7 @@ updates:
     # @types/node follows the runtime in .nvmrc, not npm's latest.
     ignore:
       - dependency-name: "@types/node"
-        update-types: ["version-update:semver-major"]
+        update-types: [ "version-update:semver-major" ]
     # A dependency joins the first group it matches. Majors get their own
     # review, one PR each, except families that must move together.
     groups:

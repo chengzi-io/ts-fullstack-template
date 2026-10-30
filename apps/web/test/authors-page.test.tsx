@@ -2,14 +2,14 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { RouterOutputs } from "@workspace/api";
-import { expect, it, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { renderApp } from "./app.tsx";
 import { server, TrpcError, trpc } from "./msw.ts";
 
 type Author = RouterOutputs["authors"]["byId"];
 
-it("keeps the delete dialog open with the server's reason", async () => {
+test("keeps the delete dialog open with the server's reason", async () => {
   const user = userEvent.setup();
   const reported = vi
     .spyOn(console, "error")

@@ -30,6 +30,26 @@
       "!**/drizzle/meta"
     ]
   },
+  "linter": {
+    "rules": {
+      "style": {
+        // test() everywhere: the preset keeps it() inside describe, but one
+        // name reads plainer.
+        "useConsistentTestIt": {
+          "level": "error",
+          "options": {
+            "function": "test",
+            "withinDescribe": "test"
+          }
+        }
+      },
+      "suspicious": {
+        // Misreads TanStack Query results: it reports `query.isPending` and
+        // `query.isError` as always false.
+        "noUnnecessaryConditions": "off"
+      }
+    }
+  },
   "overrides": [
     // Biome replaces (not merges) rule options across overrides, so the more
     // specific overrides below repeat the restrictions of the broader ones.

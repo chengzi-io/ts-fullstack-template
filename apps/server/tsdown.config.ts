@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   deps: {
     // Workspace packages export TypeScript sources; Node cannot run them.
-    alwaysBundle: [/^@workspace\//],
+    alwaysBundle: [/^@workspace\//u],
     // Native driver binaries load from node_modules at runtime.
     neverBundle: ["@libsql/client"],
     // Their own dependencies (drizzle-orm, superjson) are bundled with them;

@@ -1,22 +1,22 @@
 {
   "name": "@workspace/db",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
-  "scripts": {
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest --passWithNoTests",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-    "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
-    "db:push": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs push",
-    "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio",
-    "db:check": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs check",
-    "db:pull": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs pull"
-  },
+  "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "db:check": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs check",
+    "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:pull": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs pull",
+    "db:push": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs push",
+    "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

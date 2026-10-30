@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { queryClient } from "@/lib/query-client.ts";
 
@@ -12,7 +12,7 @@ queryClient.setDefaultOptions({ queries: { retry: false } });
 
 const emptyPage = { items: [], page: 1, pageCount: 0, pageSize: 20, total: 0 };
 
-it("reports a failing posts.list once, with its request id", async () => {
+test("reports a failing posts.list once, with its request id", async () => {
   const reported = vi
     .spyOn(console, "error")
     .mockImplementation(() => undefined);
@@ -42,7 +42,7 @@ it("reports a failing posts.list once, with its request id", async () => {
   }
 });
 
-it("shows the route error with its request id and recovers on Try again", async () => {
+test("shows the route error with its request id and recovers on Try again", async () => {
   const user = userEvent.setup();
   const reported = vi
     .spyOn(console, "error")

@@ -19,10 +19,10 @@ const [, templateName] = templateRepo.split("/");
 const ownFiles = ["scripts/init-project.mjs", "scripts/init-project.test.mjs"];
 
 // https://github.com/o/r.git, git@github.com:o/r.git, and SSH host aliases.
-const remoteRepo = /[:/]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/;
-const copyrightLine = /^Copyright \(c\) .*$/gm;
+const remoteRepo = /[:/](?<owner>[^/:]+)\/(?<name>[^/]+?)(?:\.git)?\/?$/u;
+const copyrightLine = /^Copyright \(c\) .*$/gmu;
 const templateOnly =
-  /<!-- template-only -->[\s\S]*?<!-- \/template-only -->\n+/g;
+  /<!-- template-only -->[\s\S]*?<!-- \/template-only -->\n+/gu;
 
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim();
@@ -51,7 +51,7 @@ function originRepo() {
   if (!match) {
     throw new Error(`Cannot read owner/repo from the origin remote: ${url}`);
   }
-  return `${match[1]}/${match[2]}`;
+  return `${match.groups.owner}/${match.groups.name}`;
 }
 
 const repo = process.argv[2] ?? originRepo();

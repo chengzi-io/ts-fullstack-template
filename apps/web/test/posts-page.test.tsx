@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import type { RouterInputs, RouterOutputs } from "@workspace/api";
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 
 import { renderApp } from "./app.tsx";
 import { server, trpc } from "./msw.ts";
@@ -130,7 +130,7 @@ async function pickAuthor(
   return input;
 }
 
-it("creates the first post, creating its author on the way", async () => {
+test("creates the first post, creating its author on the way", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   renderApp("/posts");
@@ -166,7 +166,7 @@ it("creates the first post, creating its author on the way", async () => {
   ]);
 });
 
-it("does not create a post without an author", async () => {
+test("does not create a post without an author", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   renderApp("/posts");
@@ -195,7 +195,7 @@ it("does not create a post without an author", async () => {
   expect(backend.posts).toHaveLength(0);
 });
 
-it("keeps the picked author when the input is retyped and left without a pick", async () => {
+test("keeps the picked author when the input is retyped and left without a pick", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   backend.authors.push(
@@ -229,7 +229,7 @@ it("keeps the picked author when the input is retyped and left without a pick", 
 });
 
 // Any idle re-render loop on a page burns CPU without failing anything else.
-it("does not re-render while idle", async () => {
+test("does not re-render while idle", async () => {
   serveBackend();
   let commits = 0;
   const countCommit = () => {
@@ -245,7 +245,7 @@ it("does not re-render while idle", async () => {
   expect(commits - settledCommits).toBe(0);
 });
 
-it("pages through more posts than fit on one page", async () => {
+test("pages through more posts than fit on one page", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   const ada = { createdAt: new Date(), id: 1, name: "Ada" };
@@ -274,7 +274,7 @@ it("pages through more posts than fit on one page", async () => {
   expect(router.state.location.search).toMatchObject({ page: 2 });
 });
 
-it("creates a post for an author outside the first page of results", async () => {
+test("creates a post for an author outside the first page of results", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   for (let n = 1; n <= 25; n += 1) {
@@ -300,7 +300,7 @@ it("creates a post for an author outside the first page of results", async () =>
   expect(backend.posts).toMatchObject([{ authorId: 25 }]);
 });
 
-it("keeps an edited post's author even when it is not among the first authors", async () => {
+test("keeps an edited post's author even when it is not among the first authors", async () => {
   const user = userEvent.setup();
   const backend = serveBackend();
   for (let n = 1; n <= 25; n += 1) {

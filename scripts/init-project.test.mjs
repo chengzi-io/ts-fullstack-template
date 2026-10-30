@@ -11,12 +11,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, test } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "..");
 const templateRepo = "chengzi-io/ts-fullstack-template";
 // "version" in package.json, "." in the release-please manifest.
-const versionField = /("(?:version|\.)": )"[^"]+"/;
+const versionField = /(?<key>"(?:version|\.)": )"[^"]+"/u;
 const temps = [];
 
 const git = (cwd, ...args) =>
@@ -47,7 +47,7 @@ function createProject(origin, { released = false } = {}) {
       const text = readFileSync(path.join(dir, file), "utf8");
       writeFileSync(
         path.join(dir, file),
-        text.replace(versionField, '$1"0.1.0"')
+        text.replace(versionField, '$<key>"0.1.0"')
       );
     }
     writeFileSync(
@@ -85,7 +85,7 @@ afterEach(() => {
   }
 });
 
-it.each([
+test.each([
   ["an unreleased template", false],
   ["a released template", true],
 ])("makes %s the new repository's own project", (_, released) => {
@@ -118,7 +118,7 @@ it.each([
   expect(leftovers.stdout).toBe("");
 });
 
-it("refuses to run on the template itself", () => {
+test("refuses to run on the template itself", () => {
   const dir = createProject(`https://github.com/${templateRepo}.git`);
 
   const result = initProject(dir);

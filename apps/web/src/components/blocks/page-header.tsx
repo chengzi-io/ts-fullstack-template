@@ -13,9 +13,9 @@ export function PageHeader({ actions, description, title }: PageHeaderProps) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="font-medium text-lg tracking-tight">{title}</h1>
+        <h1 className="text-lg font-medium tracking-tight">{title}</h1>
         {description ? (
-          <p className="max-w-prose text-muted-foreground text-sm">
+          <p className="text-muted-foreground max-w-prose text-sm">
             {description}
           </p>
         ) : null}

@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 /** Each module keeps its tables in `modules/<name>/src/schema.ts`. */
 const MODULE_SCHEMAS = "../../modules/*/src/schema.ts";
-const CREATE_TABLE = /\bCREATE TABLE\b/i;
+const CREATE_TABLE = /\bCREATE TABLE\b/iu;
 
 export interface TestDatabase {
   db: Database;

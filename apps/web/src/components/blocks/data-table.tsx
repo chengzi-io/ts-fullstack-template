@@ -59,7 +59,7 @@ export interface DataTableProps<TData extends RowData> {
 /** Column title in the table's header style. */
 export function ColumnHeader({ title }: { title: string }) {
   return (
-    <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+    <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
       {title}
     </span>
   );
@@ -84,7 +84,7 @@ function PageSizeSelect({
 
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="whitespace-nowrap text-muted-foreground">
+      <span className="text-muted-foreground whitespace-nowrap">
         Rows per page
       </span>
       <Select onValueChange={handleValueChange} value={String(pageSize)}>
@@ -159,7 +159,7 @@ export function DataTable<TData extends RowData>({
           <div className="relative">
             <SearchIcon
               aria-hidden
-              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
             />
             <Input
               aria-label={searchPlaceholder}
@@ -177,12 +177,12 @@ export function DataTable<TData extends RowData>({
         </div>
       </div>
 
-      <div className="border border-border bg-card">
+      <div className="border-border bg-card border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
-                className="border-border border-b bg-muted/40 hover:bg-muted/40"
+                className="border-border bg-muted/40 hover:bg-muted/40 border-b"
                 key={headerGroup.id}
               >
                 {headerGroup.headers.map((header) => (
@@ -208,7 +208,7 @@ export function DataTable<TData extends RowData>({
             {rows.length > 0 ? (
               rows.map((row) => (
                 <TableRow
-                  className="border-border border-b transition-colors duration-100 last:border-b-0 hover:bg-muted/30"
+                  className="border-border hover:bg-muted/30 border-b transition-colors duration-100 last:border-b-0"
                   key={row.id}
                 >
                   {row.getAllCells().map((cell) => (
@@ -230,7 +230,7 @@ export function DataTable<TData extends RowData>({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  className="h-24 text-center text-muted-foreground text-sm"
+                  className="text-muted-foreground h-24 text-center text-sm"
                   colSpan={columns.length}
                 >
                   {emptyMessage}
@@ -240,9 +240,9 @@ export function DataTable<TData extends RowData>({
           </TableBody>
         </Table>
 
-        <div className="flex flex-col gap-3 border-border border-t bg-muted/20 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-border bg-muted/20 flex flex-col gap-3 border-t px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-xs">
-            <span className="font-medium text-foreground tabular-nums">
+            <span className="text-foreground font-medium tabular-nums">
               {total}
             </span>{" "}
             {total === 1 ? "result" : "results"}
@@ -266,7 +266,7 @@ export function DataTable<TData extends RowData>({
               >
                 <ChevronLeftIcon aria-hidden className="size-3.5" />
               </Button>
-              <span className="px-1 text-muted-foreground text-xs tabular-nums">
+              <span className="text-muted-foreground px-1 text-xs tabular-nums">
                 Page {page} of {pageCount}
               </span>
               <Button

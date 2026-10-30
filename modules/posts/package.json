@@ -1,17 +1,17 @@
 {
   "name": "@workspace/posts",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
-  "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
-  },
+  "type": "module",
   "exports": {
     "./contract": "./src/contract.ts",
     "./router": "./src/router.ts",
     "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@trpc/server": "^11.22.1",
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "typescript": "~7.0.2"
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.5"
   }
 }

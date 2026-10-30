@@ -48,9 +48,9 @@ SQLite holding every module's tables:
 const createCaller = createCallerFactory(createTRPCRouter({ authors: authorsRouter }));
 
 beforeEach(async () => {
-  const test = await createTestContext();
-  caller = createCaller(test.ctx);
-  ({ dispose } = test);
+  const context = await createTestContext();
+  caller = createCaller(context.ctx);
+  ({ dispose } = context);
 });
 afterEach(() => dispose());
 ```

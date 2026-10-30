@@ -2,7 +2,7 @@
 import { authorsRouter } from "@workspace/authors/router";
 import { createTestContext } from "@workspace/kernel/testing";
 import { createCallerFactory, createTRPCRouter } from "@workspace/kernel/trpc";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { postsRouter } from "../src/router.js";
 
@@ -14,9 +14,9 @@ let caller: ReturnType<typeof createCaller>;
 let dispose: () => Promise<void>;
 
 beforeEach(async () => {
-  const test = await createTestContext();
-  caller = createCaller(test.ctx);
-  ({ dispose } = test);
+  const context = await createTestContext();
+  caller = createCaller(context.ctx);
+  ({ dispose } = context);
 });
 
 afterEach(async () => {
@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 describe("posts", () => {
-  it("creates a post that embeds its author", async () => {
+  test("creates a post that embeds its author", async () => {
     const author = await caller.authors.create({ name: "Ada" });
 
     const post = await caller.posts.create({
@@ -40,13 +40,13 @@ describe("posts", () => {
     await expect(caller.posts.byId({ id: post.id })).resolves.toEqual(post);
   });
 
-  it("rejects a post for an unknown author", async () => {
+  test("rejects a post for an unknown author", async () => {
     await expect(
       caller.posts.create({ authorId: 999, title: "Hello" })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  it("filters the list by author", async () => {
+  test("filters the list by author", async () => {
     const ada = await caller.authors.create({ name: "Ada" });
     const grace = await caller.authors.create({ name: "Grace" });
     await caller.posts.create({ authorId: ada.id, title: "by Ada" });
@@ -60,7 +60,7 @@ describe("posts", () => {
     ]);
   });
 
-  it("searches titles, bodies, and author names", async () => {
+  test("searches titles, bodies, and author names", async () => {
     const ada = await caller.authors.create({ name: "Ada" });
     const grace = await caller.authors.create({ name: "Grace" });
     await caller.posts.create({ authorId: ada.id, title: "Hello" });
@@ -77,7 +77,7 @@ describe("posts", () => {
     expect(byAuthor).toMatchObject({ items: [{ title: "World" }], total: 1 });
   });
 
-  it("updates only the fields it is given", async () => {
+  test("updates only the fields it is given", async () => {
     const author = await caller.authors.create({ name: "Ada" });
     const post = await caller.posts.create({
       authorId: author.id,
@@ -90,7 +90,7 @@ describe("posts", () => {
     expect(updated).toMatchObject({ body: "original body", title: "Hi" });
   });
 
-  it("rejects moving a post to an unknown author", async () => {
+  test("rejects moving a post to an unknown author", async () => {
     const author = await caller.authors.create({ name: "Ada" });
     const post = await caller.posts.create({
       authorId: author.id,
@@ -102,7 +102,7 @@ describe("posts", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  it("reports NOT_FOUND for a missing post", async () => {
+  test("reports NOT_FOUND for a missing post", async () => {
     await expect(caller.posts.byId({ id: 999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -114,7 +114,7 @@ describe("posts", () => {
     });
   });
 
-  it("deletes a post", async () => {
+  test("deletes a post", async () => {
     const author = await caller.authors.create({ name: "Ada" });
     const { id } = await caller.posts.create({
       authorId: author.id,
@@ -127,7 +127,7 @@ describe("posts", () => {
     });
   });
 
-  it("keeps an author who still has posts", async () => {
+  test("keeps an author who still has posts", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
     await caller.posts.create({ authorId: id, title: "Hello" });
 
