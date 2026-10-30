@@ -12,7 +12,7 @@ client intent = Zustand, form values = React Hook Form. Workspace map: root `AGE
 - A feature reaches another feature only through its **`api.ts`** (query options) or **`store.ts`** (actions) — e.g. posts lists authors for its picker and opens the author dialog. Never its components, hooks or model
 - Dependencies between features point one way (posts → authors, never back)
 - Never invalidate another feature's keys: every successful mutation invalidates all queries (`lib/query-client.ts`)
-- Unexpected errors (a failed query or mutation, a route crash) go through `lib/report-error.ts` — the single reporting seam. Features keep showing expected errors inline
+- Unexpected errors (a failed query or mutation, a route crash) go through `lib/report-error.ts` — the single reporting seam. Features keep showing expected errors inline; the API marks those `data.expected` (kernel domain errors), and the query cache does not report them
 - No barrel files. The folder is the namespace
 
 ## Layer model
@@ -148,7 +148,8 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
 
 ## Dev tools
 
-`components/dev-tools.tsx` mounts only under `import.meta.env.DEV`: Router
+`components/dev-tools.tsx` mounts only under `import.meta.env.DEV`, and never in
+Vitest (`MODE === "test"`; Agentation patches the window's timers): Router
 Devtools, Query Devtools, Agentation. Guarded so nothing ships to prod; these
 stay in `devDependencies`.
 
