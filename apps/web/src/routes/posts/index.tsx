@@ -85,7 +85,7 @@ function PostsPage() {
   );
 
   const handleRetry = useCallback(() => {
-    refetch().catch(() => undefined);
+    refetch();
   }, [refetch]);
 
   const handleDeleteRequest = useCallback((id: number) => {

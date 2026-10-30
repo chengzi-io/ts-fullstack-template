@@ -38,6 +38,7 @@ function AuthorsPage() {
     pageSize: search.pageSize,
     q,
   });
+  const { refetch } = authorsQuery;
   const { openCreate, openEdit } = useAuthorActions();
   const deleteMutation = useDeleteAuthorMutation();
   // Page-local: delete confirm does not need global/cross-route coordination.
@@ -83,9 +84,10 @@ function AuthorsPage() {
   );
 
   const handleRetry = useCallback(() => {
-    authorsQuery.refetch().catch(() => undefined);
-  }, [authorsQuery]);
+    refetch();
+  }, [refetch]);
 
+  // openCreate takes options; a click must not pass its event as them.
   const handleNew = useCallback(() => {
     openCreate();
   }, [openCreate]);
