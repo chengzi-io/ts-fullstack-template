@@ -85,7 +85,7 @@ function PostsPage() {
   );
 
   const handleRetry = useCallback(() => {
-    refetch().catch(() => undefined);
+    refetch();
   }, [refetch]);
 
   const handleDeleteRequest = useCallback((id: number) => {
@@ -118,10 +118,7 @@ function PostsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        description="Full CRUD via tRPC. Paging and search run on the server and live in the URL; create/edit dialogs are mounted by this route."
-        title="Posts"
-      />
+      <PageHeader description="All posts and their authors." title="Posts" />
 
       {postsQuery.isPending ? (
         <p className="text-muted-foreground text-sm">Loading posts…</p>
@@ -131,11 +128,6 @@ function PostsPage() {
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-4">
           <p className="font-medium text-destructive text-sm">
             Failed to load posts
-          </p>
-          <p className="mt-1 text-muted-foreground text-sm">
-            Is <code className="rounded bg-muted px-1">apps/server</code>{" "}
-            running on port 3000? Vite proxies{" "}
-            <code className="rounded bg-muted px-1">/trpc</code> there.
           </p>
           <button
             className={cn(
@@ -154,8 +146,7 @@ function PostsPage() {
         <div className="rounded-2xl border border-dashed bg-muted/30 px-6 py-10">
           <p className="font-medium text-sm">No posts yet</p>
           <p className="mt-1 max-w-sm text-muted-foreground text-sm">
-            Create a post (author required — dialog can resume after author
-            create).
+            Create your first post.
           </p>
           <div className="mt-4">
             <Button onClick={openCreate} type="button">

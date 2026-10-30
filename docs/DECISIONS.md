@@ -98,13 +98,18 @@ databases merge; a public-facing or multi-region product should use UUIDv7.
 Failed queries and mutations and route crashes all reach `reportError`
 (`apps/web/src/lib/report-error.ts`), once per error, with the request id.
 An error tracker plugs in there; features keep showing expected errors inline.
+The API marks a kernel domain error (`NotFoundError`, `ConflictError`,
+`InvalidReferenceError`) `data.expected`, and the query cache skips those;
+input that fails validation is not marked, since the web sending it is a bug.
 
 ## 14. One E2E test, of the critical flow
 
 Playwright runs the built server on a fresh temp database and the built web
-(`vite preview`): create an author, post for it, see the post. It is a CI job
-and `pnpm e2e`, never a cached Turbo task. Everything else stays in the
-faster integration tests.
+(`vite preview`): create an author, post for it, see the post. axe checks
+WCAG 2.1 A/AA at each step in the real browser, where contrast and rendered
+names can be measured (jsdom computes no styles). It is a CI job and
+`pnpm e2e`, never a cached Turbo task. Everything else stays in the faster
+integration tests.
 
 ## 15. Dependency audit blocks only what a PR introduces
 

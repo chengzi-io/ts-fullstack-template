@@ -27,13 +27,13 @@ function authorDialogCopy(isEdit: boolean): {
 } {
   if (isEdit) {
     return {
-      description: "Update via tRPC authors.update.",
+      description: "Changes apply to all of this author's posts.",
       submitLabel: "Save changes",
       title: "Edit author",
     };
   }
   return {
-    description: "Authors own posts via authorId.",
+    description: "Add someone who can write posts.",
     submitLabel: "Create author",
     title: "New author",
   };
