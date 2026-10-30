@@ -40,7 +40,7 @@ Load order: `packages/db/.env` then `apps/server/.env` (platform env wins if set
 | Script | Meaning |
 |--------|---------|
 | `dev` | tsx watch |
-| `build` | tsup → `dist/index.js` |
+| `build` | tsdown → `dist/index.js` |
 | `start` | run production bundle |
 | `test` | vitest + build smoke `/healthz` |
 | `typecheck` | tsc |
