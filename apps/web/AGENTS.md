@@ -148,7 +148,8 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
 
 ## Dev tools
 
-`components/dev-tools.tsx` mounts only under `import.meta.env.DEV`: Router
+`components/dev-tools.tsx` mounts only under `import.meta.env.DEV`, and never in
+Vitest (`MODE === "test"`; Agentation patches the window's timers): Router
 Devtools, Query Devtools, Agentation. Guarded so nothing ships to prod; these
 stay in `devDependencies`.
 

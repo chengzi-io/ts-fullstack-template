@@ -13,14 +13,58 @@ updates:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
-    # Majors stay one PR each: they need their own review.
+    # pnpm 11+ refuses to install a version younger than a day
+    # (minimumReleaseAge), so a fresher one would fail CI's install.
+    cooldown:
+      default-days: 1
+    # @types/node follows the runtime in .nvmrc, not npm's latest.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    # A dependency joins the first group it matches. Majors get their own
+    # review, one PR each, except families that must move together.
     groups:
+      # SDK 3.x and the experimental 0.3xx line ship together; 0.x bumps count
+      # as minor, so this group comes before minor-and-patch.
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
       minor-and-patch:
         patterns:
           - "*"
         update-types:
           - "minor"
           - "patch"
+      react-major:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "major"
+      trpc-major:
+        patterns:
+          - "@trpc/*"
+        update-types:
+          - "major"
+      tanstack-query-major:
+        patterns:
+          - "@tanstack/react-query*"
+        update-types:
+          - "major"
+      tanstack-router-major:
+        patterns:
+          - "@tanstack/react-router*"
+          - "@tanstack/router-*"
+        update-types:
+          - "major"
+      vitest-major:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - "major"
 
   # Keeps the commit-SHA pins (and their `# vX.Y.Z` comments) in ci.yml current.
   - package-ecosystem: "github-actions"
