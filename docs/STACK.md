@@ -62,6 +62,7 @@ it. Versions live in the `package.json` files, not here.
 | Testing Library + jsdom | Web pages rendered like a user sees them |
 | MSW | tRPC answered at the network in web tests |
 | Playwright | One end-to-end test of the critical flow |
+| axe-core | WCAG 2.1 A/AA checks at each step of that flow |
 
 ## Repository
 

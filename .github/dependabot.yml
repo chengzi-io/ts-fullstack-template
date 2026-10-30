@@ -29,6 +29,12 @@ updates:
       opentelemetry:
         patterns:
           - "@opentelemetry/*"
+      # Biome 2.6 rejects Ultracite 7's preset, and Ultracite 8 needs Biome
+      # ^2.6.2, so a Biome minor alone fails `pnpm check`.
+      biome:
+        patterns:
+          - "@biomejs/biome"
+          - "ultracite"
       minor-and-patch:
         patterns:
           - "*"
