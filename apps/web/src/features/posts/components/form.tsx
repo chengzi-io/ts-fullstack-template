@@ -11,13 +11,12 @@ import {
 } from "@workspace/ui/components/combobox";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { cn } from "@workspace/ui/lib/utils";
+import { Textarea } from "@workspace/ui/components/textarea";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -26,9 +25,6 @@ import {
   postFormDefaults,
   postFormSchema,
 } from "../model/form.ts";
-
-const controlClassName =
-  "w-full rounded-2xl border border-transparent bg-input/50 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive";
 
 interface AuthorComboboxProps {
   authors: AuthorSummary[];
@@ -177,6 +173,7 @@ export function PostForm({
   return (
     <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit}>
       <FieldGroup>
+        {/* Real apps take the author from the session; the template has no auth. */}
         <Field data-invalid={!!errors.authorId}>
           <FieldLabel htmlFor="post-author">Author</FieldLabel>
           <Controller
@@ -184,10 +181,6 @@ export function PostForm({
             name="authorId"
             render={renderAuthor}
           />
-          <FieldDescription>
-            Type to search all authors. Real apps usually take the author from
-            the session.
-          </FieldDescription>
           <FieldError errors={[errors.authorId]} />
         </Field>
 
@@ -205,16 +198,14 @@ export function PostForm({
 
         <Field data-invalid={!!errors.body}>
           <FieldLabel htmlFor="post-body">Body</FieldLabel>
-          <textarea
+          <Textarea
             aria-invalid={!!errors.body}
-            className={cn(controlClassName, "px-2.5 py-2")}
+            className="min-h-24"
             disabled={busy}
             id="post-body"
-            placeholder="Optional"
-            rows={4}
+            placeholder="Optional. Max 5000 characters."
             {...register("body")}
           />
-          <FieldDescription>Optional. Max 5000 characters.</FieldDescription>
           <FieldError errors={[errors.body]} />
         </Field>
       </FieldGroup>
