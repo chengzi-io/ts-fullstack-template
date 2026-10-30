@@ -34,12 +34,12 @@ COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --offline --frozen-lockfile --ignore-scripts --store-dir /pnpm/store
 RUN pnpm turbo run build --filter=server
-# Production node_modules for the server only, resolved from the shared
-# lockfile. pnpm 10 deploys that way only with inject-workspace-packages,
-# set here for this command so local workspace links stay symlinks.
+# Production node_modules for the server only, pinned by the shared lockfile.
+# deploy writes its own lockfile from it, which needs package metadata that
+# `pnpm fetch` does not store, so it may reach the registry; tarballs still
+# come from the store.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm --filter server deploy --prod --offline --ignore-scripts \
-      --config.inject-workspace-packages=true \
+    pnpm --filter server deploy --prod --prefer-offline --ignore-scripts \
       --store-dir /pnpm/store /prod/server
 
 # One-off migration job: drizzle-kit, drizzle.config.ts, the module schemas,
