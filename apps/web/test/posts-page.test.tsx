@@ -13,6 +13,9 @@ type Post = RouterOutputs["posts"]["byId"];
 
 const IDLE_WINDOW_MS = 100;
 const SETTLE_WINDOWS = 20;
+// Longer than the 300 ms search debounces, so a timer the page arms on mount
+// fires inside the asserted window.
+const IDLE_ASSERT_MS = 500;
 
 /** In-memory stand-in for the procedures the posts page calls. */
 function serveBackend() {
@@ -90,9 +93,9 @@ function serveBackend() {
   return { authors, posts };
 }
 
-function waitIdle() {
+function waitIdle(ms = IDLE_WINDOW_MS) {
   return act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, IDLE_WINDOW_MS));
+    await new Promise((resolve) => setTimeout(resolve, ms));
   });
 }
 
@@ -237,7 +240,7 @@ it("does not re-render while idle", async () => {
   await waitUntilQuiet(() => commits);
   const settledCommits = commits;
 
-  await waitIdle();
+  await waitIdle(IDLE_ASSERT_MS);
 
   expect(commits - settledCommits).toBe(0);
 });
