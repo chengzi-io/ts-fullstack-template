@@ -1,0 +1,25 @@
+# Build context is the repository root (see apps/server/Dockerfile).
+**/node_modules
+**/dist
+**/dist-ssr
+**/.turbo
+**/.tanstack
+**/*.tsbuildinfo
+**/coverage
+**/playwright-report
+**/test-results
+
+# Secrets and local databases never enter an image.
+**/.env*
+!**/.env.example
+**/*.db
+**/*.db-*
+
+.git
+.github
+.claude
+.vscode
+.idea
+**/.DS_Store
+**/*.log
+docs
