@@ -8,5 +8,5 @@ export default defineConfig({
   noExternal: [/^@workspace\//],
   platform: "node",
   sourcemap: true,
-  target: "node22",
+  target: "node24",
 });
