@@ -12,6 +12,7 @@ const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 /** Each module keeps its tables in `modules/<name>/src/schema.ts`. */
 const MODULE_SCHEMAS = "../../modules/*/src/schema.ts";
+const CREATE_TABLE = /\bCREATE TABLE\b/i;
 
 export interface TestDatabase {
   db: Database;
@@ -19,7 +20,7 @@ export interface TestDatabase {
   dispose: () => Promise<void>;
 }
 
-let schemaStatements: Promise<string[]> | undefined;
+let schemaScript: Promise<string> | undefined;
 
 async function hasModuleSchemas(): Promise<boolean> {
   const modulesDir = path.join(packageRoot, "../../modules");
@@ -35,13 +36,13 @@ async function hasModuleSchemas(): Promise<boolean> {
 }
 
 /**
- * DDL for every module's current schema — `drizzle-kit export` needs neither
- * a config file nor a connection, and the template ships no migrations.
- * With no modules (e.g. demo removed) the database is simply empty.
+ * DDL script for every module's current schema — `drizzle-kit export` needs
+ * neither a config file nor a connection, and the template ships no
+ * migrations. With no modules (e.g. demo removed) the database is simply empty.
  */
-async function exportSchemaStatements(): Promise<string[]> {
+async function exportSchemaScript(): Promise<string> {
   if (!(await hasModuleSchemas())) {
-    return [];
+    return "";
   }
   const { stdout } = await execFileAsync(
     process.execPath,
@@ -52,25 +53,20 @@ async function exportSchemaStatements(): Promise<string[]> {
       "turso",
       "--schema",
       MODULE_SCHEMAS,
-      "--output",
-      "json",
+      "--sql",
     ],
     { cwd: packageRoot }
   );
-  const result = JSON.parse(stdout) as {
-    statements?: string[];
-    status: string;
-  };
-  if (result.status !== "ok" || !result.statements) {
-    throw new Error(`drizzle-kit export failed: ${stdout}`);
+  if (!CREATE_TABLE.test(stdout)) {
+    throw new Error(`drizzle-kit export printed no tables: ${stdout}`);
   }
-  return result.statements;
+  return stdout;
 }
 
 /** Fresh SQLite file with the current schema; never touches `local.db`. */
 export async function createTestDb(): Promise<TestDatabase> {
-  schemaStatements ??= exportSchemaStatements();
-  const statements = await schemaStatements;
+  schemaScript ??= exportSchemaScript();
+  const script = await schemaScript;
 
   const directory = await mkdtemp(path.join(tmpdir(), "workspace-test-db-"));
   const db = createDb({ url: `file:${path.join(directory, "test.db")}` });
@@ -80,7 +76,9 @@ export async function createTestDb(): Promise<TestDatabase> {
   };
 
   try {
-    await db.$client.batch(statements, "write");
+    if (script) {
+      await db.$client.executeMultiple(script);
+    }
   } catch (error) {
     await dispose();
     throw error;
