@@ -69,3 +69,23 @@ Load order: `packages/db/.env` then `apps/server/.env` (platform env wins if set
 - Shutdown: SIGTERM → `/readyz` 503 → wait `SHUTDOWN_DRAIN_MS` → close HTTP
   (in-flight requests finish) → close DB → exit 0; exit 1 if it exceeds
   `SHUTDOWN_TIMEOUT_MS`
+
+### Docker
+
+`Dockerfile` builds from the repository root. The image holds `dist/` and
+production-only `node_modules` (`pnpm deploy`), runs as `node` with
+`NODE_ENV=production` on port 3000, and its `HEALTHCHECK` calls `/healthz`.
+It never migrates on start; the `migrate` target is the one-off job.
+
+```bash
+docker build -f apps/server/Dockerfile -t ts-fullstack-server .
+docker build -f apps/server/Dockerfile --target migrate -t ts-fullstack-migrate .
+
+docker run --rm -e DATABASE_URL=libsql://… -e DATABASE_AUTH_TOKEN=… ts-fullstack-migrate
+docker run -p 3000:3000 -e DATABASE_URL=libsql://… -e DATABASE_AUTH_TOKEN=… ts-fullstack-server
+```
+
+`ts-fullstack-migrate` runs `pnpm db:migrate`, which fails until
+`packages/db/drizzle/` holds a migration; the demo schema has none, so use
+`… ts-fullstack-migrate pnpm db:push` until then. A `file:` database needs a
+mounted volume and `DATABASE_SINGLE_INSTANCE=true`.

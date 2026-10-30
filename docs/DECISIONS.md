@@ -157,5 +157,6 @@ tag, so `main` must stay usable between releases.
 
 ## Out of scope for the template
 
-Auth implementations; audit log, event bus, job queue; cloud, container, or
-reverse-proxy specifics; rate-limit numbers without real traffic targets.
+Auth implementations; audit log, event bus, job queue; cloud, orchestration,
+or reverse-proxy specifics (`apps/server/Dockerfile` is a platform-neutral
+image, nothing more); rate-limit numbers without real traffic targets.
