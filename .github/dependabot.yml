@@ -13,6 +13,10 @@ updates:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
+    # pnpm 11+ refuses to install a version younger than a day
+    # (minimumReleaseAge), so a fresher one would fail CI's install.
+    cooldown:
+      default-days: 1
     # @types/node follows the runtime in .nvmrc, not npm's latest.
     ignore:
       - dependency-name: "@types/node"
