@@ -23,7 +23,11 @@ import {
   toCreatePostInput,
   toUpdatePostInput,
 } from "../model/form.ts";
-import { usePostActions, usePostDialog } from "../store.ts";
+import {
+  type PostDialog as PostDialogState,
+  usePostActions,
+  usePostDialog,
+} from "../store.ts";
 import { PostForm } from "./form.tsx";
 
 const AUTHOR_SEARCH_DEBOUNCE_MS = 300;
@@ -58,59 +62,77 @@ function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
   );
 }
 
-function PostDialogBody({
-  authors,
-  busy,
-  defaults,
-  editId,
-  isEdit,
-  onAuthorSearchChange,
-  onCancel,
-  onNeedAuthor,
-  onSubmit,
-  saveError,
-  showEmptyAuthors,
-  showForm,
-  submitLabel,
-}: {
-  authors: AuthorSummary[];
-  busy: boolean;
-  defaults: PostFormValues;
-  editId: number | null;
-  isEdit: boolean;
-  onAuthorSearchChange: (search: string) => void;
-  onCancel: () => void;
-  onNeedAuthor: () => void;
-  onSubmit: (values: PostFormValues) => void | Promise<void>;
-  saveError: { message?: string } | null;
-  showEmptyAuthors: boolean;
-  showForm: boolean;
-  submitLabel: string;
-}) {
-  return (
-    <>
-      {showEmptyAuthors ? (
-        <NeedAuthorPanel onCreateAuthor={onNeedAuthor} />
-      ) : null}
-      {showForm ? (
-        <PostForm
-          authors={authors}
-          defaultValues={defaults}
-          isSubmitting={busy}
-          key={isEdit ? `edit-${editId}` : "create"}
-          onAuthorSearchChange={onAuthorSearchChange}
-          onCancel={onCancel}
-          onSubmit={onSubmit}
-          submitLabel={submitLabel}
-        />
-      ) : null}
-      {saveError ? (
-        <p className="text-destructive text-sm">
-          {saveError.message || "Could not save post."}
-        </p>
-      ) : null}
-    </>
+/**
+ * The author field's options: a debounced server search, plus the post's own
+ * author when editing. The search clears when the dialog closes.
+ */
+function useAuthorPicker(
+  enabled: boolean,
+  postAuthor: AuthorSummary | undefined
+) {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, AUTHOR_SEARCH_DEBOUNCE_MS);
+  const query = useAuthorOptionsQuery(debouncedSearch, { enabled });
+
+  const matches = query.data?.items;
+  // Editing keeps the post's own author selectable even when a search hides it.
+  const authors = useMemo(() => {
+    const found = matches ?? [];
+    if (!postAuthor || found.some((author) => author.id === postAuthor.id)) {
+      return found;
+    }
+    return [postAuthor, ...found];
+  }, [matches, postAuthor]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setSearch("");
+    }
+  }, [enabled]);
+
+  return {
+    authors,
+    noAuthorsAtAll: query.isSuccess && authors.length === 0 && !debouncedSearch,
+    query,
+    setSearch,
+  };
+}
+
+/** Creates or updates by the dialog's mode; save errors reset when it closes. */
+function useSavePost(dialog: PostDialogState, onSaved: () => void) {
+  const createMutation = useCreatePostMutation();
+  const updateMutation = useUpdatePostMutation();
+
+  // `reset` is stable; the mutation result object is new on every render, so
+  // depending on it re-runs this effect, and reset() re-renders — a loop.
+  const { reset: resetCreate } = createMutation;
+  const { reset: resetUpdate } = updateMutation;
+  const isOpen = dialog.mode !== "closed";
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetCreate();
+      resetUpdate();
+    }
+  }, [isOpen, resetCreate, resetUpdate]);
+
+  const save = useCallback(
+    async (values: PostFormValues) => {
+      if (dialog.mode === "edit") {
+        await updateMutation.mutateAsync(toUpdatePostInput(dialog.id, values));
+      } else {
+        await createMutation.mutateAsync(toCreatePostInput(values));
+      }
+      onSaved();
+    },
+    [createMutation, dialog, onSaved, updateMutation]
   );
+
+  return {
+    busy: createMutation.isPending || updateMutation.isPending,
+    error: createMutation.error ?? updateMutation.error ?? null,
+    save,
+  };
 }
 
 function postFormDefaultsFrom(post: Post | undefined): PostFormValues {
@@ -138,51 +160,24 @@ export function PostDialog() {
   const editId = postDialog.mode === "edit" ? postDialog.id : null;
   const copy = postDialogCopy(isEdit);
 
-  const [authorSearch, setAuthorSearch] = useState("");
-  const debouncedAuthorSearch = useDebouncedValue(
-    authorSearch,
-    AUTHOR_SEARCH_DEBOUNCE_MS
-  );
-  const authorsQuery = useAuthorOptionsQuery(debouncedAuthorSearch, {
-    enabled: isOpen,
-  });
   const postQuery = usePostQuery(editId, { enabled: isOpen && isEdit });
-  const createMutation = useCreatePostMutation();
-  const updateMutation = useUpdatePostMutation();
-  const busy = createMutation.isPending || updateMutation.isPending;
-  const saveError = createMutation.error ?? updateMutation.error ?? null;
+  const {
+    authors,
+    noAuthorsAtAll,
+    query: authorsQuery,
+    setSearch: setAuthorSearch,
+  } = useAuthorPicker(isOpen, isEdit ? postQuery.data?.author : undefined);
+  const {
+    busy,
+    error: saveError,
+    save: handleSubmit,
+  } = useSavePost(postDialog, close);
 
-  const matches = authorsQuery.data?.items;
-  const postAuthor = isEdit ? postQuery.data?.author : undefined;
-  // Editing keeps the post's own author selectable even when a search hides it.
-  const authors = useMemo(() => {
-    const found = matches ?? [];
-    if (!postAuthor || found.some((author) => author.id === postAuthor.id)) {
-      return found;
-    }
-    return [postAuthor, ...found];
-  }, [matches, postAuthor]);
-
-  const noAuthorsAtAll =
-    authorsQuery.isSuccess && authors.length === 0 && !debouncedAuthorSearch;
   const showEmptyAuthors = !isEdit && noAuthorsAtAll;
   const showForm =
     authorsQuery.isSuccess &&
     !noAuthorsAtAll &&
     (!isEdit || postQuery.isSuccess);
-
-  // `reset` is stable; the mutation result object is new on every render, so
-  // depending on it re-runs this effect, and reset() re-renders — a loop.
-  const { reset: resetCreate } = createMutation;
-  const { reset: resetUpdate } = updateMutation;
-
-  useEffect(() => {
-    if (!isOpen) {
-      resetCreate();
-      resetUpdate();
-      setAuthorSearch("");
-    }
-  }, [isOpen, resetCreate, resetUpdate]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -191,20 +186,6 @@ export function PostDialog() {
       }
     },
     [close]
-  );
-
-  const handleSubmit = useCallback(
-    async (values: PostFormValues) => {
-      if (postDialog.mode === "edit") {
-        await updateMutation.mutateAsync(
-          toUpdatePostInput(postDialog.id, values)
-        );
-      } else {
-        await createMutation.mutateAsync(toCreatePostInput(values));
-      }
-      close();
-    },
-    [close, createMutation, postDialog, updateMutation]
   );
 
   const handleNeedAuthor = useCallback(() => {
@@ -216,6 +197,8 @@ export function PostDialog() {
     ? postFormDefaultsFrom(postQuery.data)
     : postFormDefaults;
 
+  const formKey = isEdit ? `edit-${editId}` : "create";
+  const submitLabel = busy ? "Saving…" : copy.submitLabel;
   const loading = authorsQuery.isPending || (isEdit && postQuery.isPending);
   const loadError = authorsQuery.isError || (isEdit && postQuery.isError);
 
@@ -234,21 +217,26 @@ export function PostDialog() {
           <p className="text-destructive text-sm">Could not load data.</p>
         ) : null}
 
-        <PostDialogBody
-          authors={authors}
-          busy={busy}
-          defaults={defaults}
-          editId={editId}
-          isEdit={isEdit}
-          onAuthorSearchChange={setAuthorSearch}
-          onCancel={close}
-          onNeedAuthor={handleNeedAuthor}
-          onSubmit={handleSubmit}
-          saveError={saveError}
-          showEmptyAuthors={showEmptyAuthors}
-          showForm={showForm}
-          submitLabel={busy ? "Saving…" : copy.submitLabel}
-        />
+        {showEmptyAuthors ? (
+          <NeedAuthorPanel onCreateAuthor={handleNeedAuthor} />
+        ) : null}
+        {showForm ? (
+          <PostForm
+            authors={authors}
+            defaultValues={defaults}
+            isSubmitting={busy}
+            key={formKey}
+            onAuthorSearchChange={setAuthorSearch}
+            onCancel={close}
+            onSubmit={handleSubmit}
+            submitLabel={submitLabel}
+          />
+        ) : null}
+        {saveError ? (
+          <p className="text-destructive text-sm">
+            {saveError.message || "Could not save post."}
+          </p>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
