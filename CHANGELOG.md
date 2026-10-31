@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.0](https://github.com/chengzi-io/ts-fullstack-template/compare/v0.1.0...v0.2.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* pnpm 12 is required (packageManager pnpm@12.16.1).
+* Node 24 or later is required (engines.node >=24).
+
+### Bug Fixes
+
+* stop reporting expected api errors as unexpected ([#30](https://github.com/chengzi-io/ts-fullstack-template/issues/30)) ([3e26728](https://github.com/chengzi-io/ts-fullstack-template/commit/3e26728e81a65413f75bfef1de5eb28f884309ed))
+* **web:** keep the dev tools out of vitest ([#28](https://github.com/chengzi-io/ts-fullstack-template/issues/28)) ([0bbd75f](https://github.com/chengzi-io/ts-fullstack-template/commit/0bbd75f4d7797dafa14cf5911bf12f64a86dcc30))
+* **web:** make the demo follow its own rules ([#17](https://github.com/chengzi-io/ts-fullstack-template/issues/17)) ([eb1ed39](https://github.com/chengzi-io/ts-fullstack-template/commit/eb1ed39535f5145985b0d40ab443e98140490419))
+* **web:** skip the debounce timer for an unchanged value ([#43](https://github.com/chengzi-io/ts-fullstack-template/issues/43)) ([24e42f5](https://github.com/chengzi-io/ts-fullstack-template/commit/24e42f5a014ef802c1a26e6303f69bc9b8728ccc))
+
+
+### Build System
+
+* move to node 24 ([#15](https://github.com/chengzi-io/ts-fullstack-template/issues/15)) ([d0b9bdd](https://github.com/chengzi-io/ts-fullstack-template/commit/d0b9bdd2c287e5623f0fb3adb63c55ceffa396eb))
+* move to pnpm 12 ([#29](https://github.com/chengzi-io/ts-fullstack-template/issues/29)) ([9380038](https://github.com/chengzi-io/ts-fullstack-template/commit/93800384fdfcf1795b9d78ff3ad0824204707286))
+
 ## 0.1.0 (2026-10-28)
 
 
