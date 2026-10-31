@@ -99,7 +99,7 @@ committing (lefthook also runs it). What it cannot check is on you:
 # Testing
 
 - Vitest runs each package's `test/` (`*.test.ts`; `*.test.tsx` in
-  `apps/web`) and the root `scripts/*.test.mjs`; import `describe` / `it` / `expect` from `vitest` (no globals)
+  `apps/web`) and the root `scripts/*.test.mjs`; import `describe` / `test` / `expect` from `vitest` (no globals)
 - Testing Trophy: integration first — module routers via `createTestContext()`,
   the host via `app.request()`, web pages via `renderApp()` with MSW `trpc()`.
   Unit tests for pure logic; E2E only for critical flows
@@ -117,6 +117,6 @@ committing (lefthook also runs it). What it cannot check is on you:
   processes it starts itself — a fresh temp database, `apps/server` and `vite
   preview` — so no dev server may be left running. Once per machine, install
   its browser: `pnpm --filter web exec playwright install chromium`
-- Keep suites flat; assert inside `it()`; async/await, no done callbacks
+- Keep suites flat; assert inside `test()`; async/await, no done callbacks
 
 Why things are the way they are: `docs/DECISIONS.md`.

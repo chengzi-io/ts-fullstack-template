@@ -1,10 +1,10 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 
 import { renderApp } from "./app.tsx";
 
-it("toggles between light and dark from the header button", async () => {
+test("toggles between light and dark from the header button", async () => {
   const user = userEvent.setup();
   renderApp("/");
   const toggle = await screen.findByRole("button", { name: "Toggle theme" });

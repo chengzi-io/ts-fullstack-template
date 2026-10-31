@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { createShutdown } from "../src/lib/shutdown.js";
 
@@ -59,7 +59,7 @@ function createHarness(
 }
 
 describe("shutdown", () => {
-  it("drains HTTP before closing the database, then exits 0", async () => {
+  test("drains HTTP before closing the database, then exits 0", async () => {
     const h = createHarness();
 
     const done = h.shutdown({ reason: "SIGTERM" });
@@ -72,7 +72,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[0]]);
   });
 
-  it("runs once no matter how many signals arrive", async () => {
+  test("runs once no matter how many signals arrive", async () => {
     const h = createHarness();
 
     const first = h.shutdown({ reason: "SIGTERM" });
@@ -85,7 +85,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[0]]);
   });
 
-  it("keeps the worst exit code requested while draining", async () => {
+  test("keeps the worst exit code requested while draining", async () => {
     const h = createHarness();
 
     const done = h.shutdown({ reason: "SIGTERM" });
@@ -96,7 +96,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("force-closes connections and exits 1 after the timeout", async () => {
+  test("force-closes connections and exits 1 after the timeout", async () => {
     const h = createHarness();
 
     const done = h.shutdown({ reason: "SIGTERM" });
@@ -109,7 +109,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("exits 1 when the HTTP server fails to close", async () => {
+  test("exits 1 when the HTTP server fails to close", async () => {
     const h = createHarness();
 
     const done = h.shutdown({ reason: "SIGTERM" });
@@ -120,7 +120,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("exits 1 when closing the database throws", async () => {
+  test("exits 1 when closing the database throws", async () => {
     const h = createHarness({
       closeDatabase: () => {
         throw new Error("db close failed");
@@ -134,7 +134,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("closes tracing after the database and before exit", async () => {
+  test("closes tracing after the database and before exit", async () => {
     const order: string[] = [];
     const h = createHarness({
       closeDatabase: () => order.push("database"),
@@ -152,7 +152,7 @@ describe("shutdown", () => {
     expect(order).toEqual(["database", "tracing", "exit:0"]);
   });
 
-  it("exits 1 when closing tracing fails", async () => {
+  test("exits 1 when closing tracing fails", async () => {
     const h = createHarness({
       closeTracing: () => Promise.reject(new Error("flush failed")),
     });
@@ -165,7 +165,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("force-exits while tracing shutdown hangs", async () => {
+  test("force-exits while tracing shutdown hangs", async () => {
     const h = createHarness({
       closeTracing: () => new Promise<void>(() => undefined),
     });
@@ -178,7 +178,7 @@ describe("shutdown", () => {
     expect(h.exit.mock.calls).toEqual([[1]]);
   });
 
-  it("reports not ready, drains, and only then closes HTTP", async () => {
+  test("reports not ready, drains, and only then closes HTTP", async () => {
     const h = createHarness({ drainMs: DRAIN_MS });
 
     const done = h.shutdown({ reason: "SIGTERM" });

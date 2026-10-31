@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { Logger } from "../src/context.js";
 import {
@@ -51,7 +51,7 @@ beforeEach(async () => {
   const record = (level: keyof Logger) => (data: object, message?: string) => {
     entries.push({ data: data as Record<string, unknown>, level, message });
   };
-  const test = await createTestContext({
+  const context = await createTestContext({
     log: {
       debug: record("debug"),
       error: record("error"),
@@ -59,8 +59,8 @@ beforeEach(async () => {
       warn: record("warn"),
     },
   });
-  caller = createCaller(test.ctx);
-  ({ dispose } = test);
+  caller = createCaller(context.ctx);
+  ({ dispose } = context);
 });
 
 afterEach(async () => {
@@ -68,7 +68,7 @@ afterEach(async () => {
 });
 
 describe("domain errors", () => {
-  it("map to tRPC codes and keep their message", async () => {
+  test("map to tRPC codes and keep their message", async () => {
     await expect(caller.missing()).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Thing not found",
@@ -81,7 +81,7 @@ describe("domain errors", () => {
     });
   });
 
-  it("are logged as warnings with the mapped code", async () => {
+  test("are logged as warnings with the mapped code", async () => {
     await expect(caller.missing()).rejects.toThrow();
 
     expect(entries).toMatchObject([
@@ -94,7 +94,7 @@ describe("domain errors", () => {
   });
 });
 
-it("logs the driver-level cause of internal errors, without SQL", async () => {
+test("logs the driver-level cause of internal errors, without SQL", async () => {
   await expect(caller.crash()).rejects.toMatchObject({
     code: "INTERNAL_SERVER_ERROR",
   });

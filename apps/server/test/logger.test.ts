@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { createLogger } from "../src/lib/logger.js";
 
@@ -17,7 +17,7 @@ function createCapturingLogger() {
 }
 
 describe("logger", () => {
-  it("redacts secrets at the top level and one level deep", () => {
+  test("redacts secrets at the top level and one level deep", () => {
     const { lines, log } = createCapturingLogger();
 
     log.info(
@@ -52,7 +52,7 @@ describe("logger", () => {
     });
   });
 
-  it("redacts request headers that carry credentials", () => {
+  test("redacts request headers that carry credentials", () => {
     const { lines, log } = createCapturingLogger();
 
     log.info(

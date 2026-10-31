@@ -24,15 +24,15 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   }, [reset]);
 
   return (
-    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-4">
-      <p className="font-medium text-destructive text-sm">
+    <div className="border-destructive/30 bg-destructive/5 rounded-2xl border px-6 py-4">
+      <p className="text-destructive text-sm font-medium">
         Something went wrong
       </p>
-      <p className="mt-1 text-muted-foreground text-sm">
+      <p className="text-muted-foreground mt-1 text-sm">
         {errorMessage(error)}
       </p>
       {requestId ? (
-        <p className="mt-1 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-1 text-xs">
           Request id: {requestId}
         </p>
       ) : null}

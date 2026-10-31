@@ -125,8 +125,8 @@ function PostsPage() {
       ) : null}
 
       {postsQuery.isError ? (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-4">
-          <p className="font-medium text-destructive text-sm">
+        <div className="border-destructive/30 bg-destructive/5 rounded-2xl border px-6 py-4">
+          <p className="text-destructive text-sm font-medium">
             Failed to load posts
           </p>
           <button
@@ -143,9 +143,9 @@ function PostsPage() {
       ) : null}
 
       {hasNoPosts ? (
-        <div className="rounded-2xl border border-dashed bg-muted/30 px-6 py-10">
-          <p className="font-medium text-sm">No posts yet</p>
-          <p className="mt-1 max-w-sm text-muted-foreground text-sm">
+        <div className="bg-muted/30 rounded-2xl border border-dashed px-6 py-10">
+          <p className="text-sm font-medium">No posts yet</p>
+          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
             Create your first post.
           </p>
           <div className="mt-4">

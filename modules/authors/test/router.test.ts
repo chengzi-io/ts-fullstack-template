@@ -1,7 +1,7 @@
 /** Demo — delete with the authors module. */
 import { createTestContext } from "@workspace/kernel/testing";
 import { createCallerFactory, createTRPCRouter } from "@workspace/kernel/trpc";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { createAuthorsRepo } from "../src/repo.js";
 import { authorsRouter } from "../src/router.js";
@@ -15,9 +15,9 @@ let db: Awaited<ReturnType<typeof createTestContext>>["db"];
 let dispose: () => Promise<void>;
 
 beforeEach(async () => {
-  const test = await createTestContext();
-  caller = createCaller(test.ctx);
-  ({ db, dispose } = test);
+  const context = await createTestContext();
+  caller = createCaller(context.ctx);
+  ({ db, dispose } = context);
 });
 
 afterEach(async () => {
@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 describe("authors", () => {
-  it("creates an author with a trimmed name and reads it back", async () => {
+  test("creates an author with a trimmed name and reads it back", async () => {
     const created = await caller.authors.create({ name: "  Ada  " });
 
     expect(created.name).toBe("Ada");
@@ -34,13 +34,13 @@ describe("authors", () => {
     );
   });
 
-  it("rejects a blank name", async () => {
+  test("rejects a blank name", async () => {
     await expect(caller.authors.create({ name: "   " })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
   });
 
-  it("lists newest first with page metadata", async () => {
+  test("lists newest first with page metadata", async () => {
     await caller.authors.create({ name: "first" });
     await caller.authors.create({ name: "second" });
     await caller.authors.create({ name: "third" });
@@ -59,7 +59,7 @@ describe("authors", () => {
     });
   });
 
-  it("filters by a case-insensitive name match", async () => {
+  test("filters by a case-insensitive name match", async () => {
     await caller.authors.create({ name: "Ada Lovelace" });
     await caller.authors.create({ name: "Grace Hopper" });
 
@@ -69,7 +69,7 @@ describe("authors", () => {
     expect(page.items.map((author) => author.name)).toEqual(["Ada Lovelace"]);
   });
 
-  it("matches % and _ in the query literally", async () => {
+  test("matches % and _ in the query literally", async () => {
     await caller.authors.create({ name: "100% pure" });
     await caller.authors.create({ name: "plain" });
 
@@ -78,7 +78,7 @@ describe("authors", () => {
     expect(page.items.map((author) => author.name)).toEqual(["100% pure"]);
   });
 
-  it("renames an author", async () => {
+  test("renames an author", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 
     const updated = await caller.authors.update({ id, name: "Grace" });
@@ -86,7 +86,7 @@ describe("authors", () => {
     expect(updated.name).toBe("Grace");
   });
 
-  it("rejects an update without fields", async () => {
+  test("rejects an update without fields", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 
     await expect(caller.authors.update({ id })).rejects.toMatchObject({
@@ -94,7 +94,7 @@ describe("authors", () => {
     });
   });
 
-  it("reports NOT_FOUND for a missing author", async () => {
+  test("reports NOT_FOUND for a missing author", async () => {
     await expect(caller.authors.byId({ id: 999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -106,7 +106,7 @@ describe("authors", () => {
     });
   });
 
-  it("deletes an author", async () => {
+  test("deletes an author", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 
     await expect(caller.authors.delete({ id })).resolves.toEqual({ ok: true });
@@ -115,7 +115,7 @@ describe("authors", () => {
     });
   });
 
-  it("joins a surrounding transaction and rolls back with it", async () => {
+  test("joins a surrounding transaction and rolls back with it", async () => {
     await expect(
       db.transaction(async (tx) => {
         await createAuthorsRepo(tx).create({ name: "Ada" });

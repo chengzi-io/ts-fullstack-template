@@ -1,6 +1,6 @@
 name: Feature request
 description: Propose a capability or an improvement to the template.
-labels: ["enhancement"]
+labels: [ "enhancement" ]
 body:
   - type: markdown
     attributes:

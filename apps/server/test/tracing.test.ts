@@ -10,7 +10,7 @@ import {
   beforeEach,
   describe,
   expect,
-  it,
+  test,
   vi,
 } from "vitest";
 
@@ -25,7 +25,7 @@ describe("tracing without a provider", () => {
     trace.disable();
   });
 
-  it("stays a no-op when the endpoint is unset", async () => {
+  test("stays a no-op when the endpoint is unset", async () => {
     const tracing = await startTracing({ endpoint: undefined });
     const { app, dispose, logs } = await createTestApp();
 
@@ -52,17 +52,17 @@ describe("tracing with a provider", () => {
     provider.register();
   });
 
+  beforeEach(() => {
+    exporter.reset();
+  });
+
   afterAll(async () => {
     await provider.shutdown();
     trace.disable();
     vi.unstubAllEnvs();
   });
 
-  beforeEach(() => {
-    exporter.reset();
-  });
-
-  it("records one server span per request", async () => {
+  test("records one server span per request", async () => {
     const { app, dispose } = await createTestApp();
 
     await app.request("/");
@@ -76,7 +76,7 @@ describe("tracing with a provider", () => {
     await dispose();
   });
 
-  it("stamps the access log line with that span's trace id", async () => {
+  test("stamps the access log line with that span's trace id", async () => {
     const { app, dispose, logs } = await createTestApp();
 
     await app.request("/");
@@ -93,7 +93,7 @@ describe("tracing with a provider", () => {
     await dispose();
   });
 
-  it("takes service.name from OTEL_SERVICE_NAME", async () => {
+  test("takes service.name from OTEL_SERVICE_NAME", async () => {
     const { app, dispose } = await createTestApp();
 
     await app.request("/");

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { App } from "../src/app.js";
 import { createTestApp } from "./app.js";
@@ -29,21 +29,21 @@ function postJson(path: string, body: string, headers?: HeadersInit) {
 }
 
 describe("probes", () => {
-  it("reports liveness", async () => {
+  test("reports liveness", async () => {
     const res = await app.request("/healthz");
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: "ok" });
   });
 
-  it("reports ready while the database answers", async () => {
+  test("reports ready while the database answers", async () => {
     const res = await app.request("/readyz");
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: "ready" });
   });
 
-  it("reports not ready once the database is unreachable", async () => {
+  test("reports not ready once the database is unreachable", async () => {
     db.close();
 
     const res = await app.request("/readyz");
@@ -52,7 +52,7 @@ describe("probes", () => {
     expect(await res.json()).toMatchObject({ status: "not_ready" });
   });
 
-  it("reports not ready while draining for shutdown", async () => {
+  test("reports not ready while draining for shutdown", async () => {
     readiness.draining = true;
 
     const res = await app.request("/readyz");
@@ -61,7 +61,7 @@ describe("probes", () => {
     expect(await res.json()).toMatchObject({ status: "draining" });
   });
 
-  it("logs why it is not ready, without SQL", async () => {
+  test("logs why it is not ready, without SQL", async () => {
     db.close();
 
     await app.request("/readyz");
@@ -79,13 +79,13 @@ describe("probes", () => {
 });
 
 describe("request id", () => {
-  it("generates one when the caller sends none", async () => {
+  test("generates one when the caller sends none", async () => {
     const res = await app.request("/healthz");
 
     expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 
-  it("propagates the upstream id", async () => {
+  test("propagates the upstream id", async () => {
     const res = await app.request("/healthz", {
       headers: { "x-request-id": "edge-123" },
     });
@@ -93,7 +93,7 @@ describe("request id", () => {
     expect(res.headers.get("x-request-id")).toBe("edge-123");
   });
 
-  it("tags a procedure log line with it exactly once", async () => {
+  test("tags a procedure log line with it exactly once", async () => {
     const res = await postJson(
       "/trpc/echo",
       JSON.stringify({ json: { name: "a" } })
@@ -109,7 +109,7 @@ describe("request id", () => {
 });
 
 describe("error contract", () => {
-  it("returns a JSON 404 that carries the request id", async () => {
+  test("returns a JSON 404 that carries the request id", async () => {
     const res = await app.request("/missing");
 
     expect(res.status).toBe(404);
@@ -120,7 +120,7 @@ describe("error contract", () => {
     });
   });
 
-  it("rejects bodies over the limit with 413", async () => {
+  test("rejects bodies over the limit with 413", async () => {
     const res = await postJson("/trpc/echo", "x".repeat(BODY_LIMIT_BYTES + 1));
 
     expect(res.status).toBe(413);
@@ -130,7 +130,7 @@ describe("error contract", () => {
     });
   });
 
-  it("returns field errors and the request id for invalid tRPC input", async () => {
+  test("returns field errors and the request id for invalid tRPC input", async () => {
     const res = await postJson(
       "/trpc/echo",
       JSON.stringify({ json: { name: "" } })
@@ -146,7 +146,7 @@ describe("error contract", () => {
     });
   });
 
-  it("marks a domain failure as expected, for the web to show inline", async () => {
+  test("marks a domain failure as expected, for the web to show inline", async () => {
     const res = await postJson(
       "/trpc/conflict",
       JSON.stringify({ json: null })
@@ -162,7 +162,7 @@ describe("error contract", () => {
     });
   });
 
-  it("masks internal failures behind a generic message", async () => {
+  test("masks internal failures behind a generic message", async () => {
     db.close();
 
     const res = await app.request("/trpc/ping");

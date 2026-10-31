@@ -3,34 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "packageManager": "pnpm@12.16.1",
-  "engines": {
-    "node": ">=24"
-  },
   "scripts": {
-    "dev": "turbo dev",
     "build": "turbo build",
-    "test": "turbo test && vitest run --dir scripts --passWithNoTests",
-    "test:watch": "turbo test:watch",
-    "e2e": "pnpm build && pnpm --filter web e2e",
-    "typecheck": "turbo typecheck",
     "check": "ultracite check",
-    "fix": "ultracite fix",
-    "prepare": "lefthook install",
+    "db:check": "pnpm --filter @workspace/db db:check",
     "db:generate": "pnpm --filter @workspace/db db:generate",
     "db:migrate": "pnpm --filter @workspace/db db:migrate",
     "db:push": "pnpm --filter @workspace/db db:push",
     "db:studio": "pnpm --filter @workspace/db db:studio",
-    "db:check": "pnpm --filter @workspace/db db:check"
+    "dev": "turbo dev",
+    "e2e": "pnpm build && pnpm --filter web e2e",
+    "fix": "ultracite fix",
+    "prepare": "lefthook install",
+    "test": "turbo test && vitest run --dir scripts --passWithNoTests",
+    "test:watch": "turbo test:watch",
+    "typecheck": "turbo typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.4",
+    "@biomejs/biome": "2.6.4",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "lefthook": "^2.2.2",
     "turbo": "^2.11.10",
     "typescript": "~7.0.2",
-    "ultracite": "7.9.4",
+    "ultracite": "8.1.0",
     "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
   }
 }

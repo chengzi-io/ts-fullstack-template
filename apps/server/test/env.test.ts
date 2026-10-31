@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-const INVALID_ENV = /invalid environment variables/i;
-const NEEDS_SINGLE_INSTANCE = /DATABASE_SINGLE_INSTANCE/;
-const DRAIN_TOO_LONG = /SHUTDOWN_DRAIN_MS/;
+const INVALID_ENV = /invalid environment variables/iu;
+const NEEDS_SINGLE_INSTANCE = /DATABASE_SINGLE_INSTANCE/u;
+const DRAIN_TOO_LONG = /SHUTDOWN_DRAIN_MS/u;
 
 /** `env.ts` validates `process.env` at import, so each case re-imports it. */
 async function loadEnv(vars: Record<string, string | undefined>) {
@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe("env", () => {
-  it("fails fast without DATABASE_URL", async () => {
+  test("fails fast without DATABASE_URL", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(loadEnv({ DATABASE_URL: undefined })).rejects.toThrow(
@@ -28,7 +28,7 @@ describe("env", () => {
     );
   });
 
-  it("rejects database URLs the libSQL client cannot open", async () => {
+  test("rejects database URLs the libSQL client cannot open", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
@@ -36,7 +36,7 @@ describe("env", () => {
     ).rejects.toThrow(INVALID_ENV);
   });
 
-  it("refuses a local file database in production", async () => {
+  test("refuses a local file database in production", async () => {
     await expect(
       loadEnv({
         DATABASE_SINGLE_INSTANCE: undefined,
@@ -46,7 +46,7 @@ describe("env", () => {
     ).rejects.toThrow(NEEDS_SINGLE_INSTANCE);
   });
 
-  it("allows a file database in production for a declared single instance", async () => {
+  test("allows a file database in production for a declared single instance", async () => {
     const env = await loadEnv({
       DATABASE_SINGLE_INSTANCE: "true",
       DATABASE_URL: "file:/var/data/app.db",
@@ -56,7 +56,7 @@ describe("env", () => {
     expect(env.DATABASE_SINGLE_INSTANCE).toBe(true);
   });
 
-  it("refuses a drain that outlasts the shutdown timeout", async () => {
+  test("refuses a drain that outlasts the shutdown timeout", async () => {
     await expect(
       loadEnv({
         DATABASE_URL: "libsql://app.example.turso.io",
@@ -66,7 +66,7 @@ describe("env", () => {
     ).rejects.toThrow(DRAIN_TOO_LONG);
   });
 
-  it("accepts a remote libSQL URL and applies defaults", async () => {
+  test("accepts a remote libSQL URL and applies defaults", async () => {
     const env = await loadEnv({
       DATABASE_URL: "libsql://app.example.turso.io",
       LOG_LEVEL: undefined,
