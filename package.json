@@ -20,13 +20,13 @@
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.4",
+    "@biomejs/biome": "2.6.6",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "lefthook": "^2.2.2",
     "turbo": "^2.11.10",
     "typescript": "~7.0.2",
-    "ultracite": "8.1.0",
+    "ultracite": "8.1.1",
     "vitest": "^5.0.5"
   },
   "packageManager": "pnpm@12.16.1",
