@@ -1,5 +1,6 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 const AUTHOR_NAME = "Ada Lovelace";
 const POST_TITLE = "Hello from Playwright";

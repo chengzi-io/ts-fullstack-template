@@ -16,9 +16,8 @@ const noopHandle: TracingHandle = { shutdown: () => Promise.resolve() };
  * `OTEL_RESOURCE_ATTRIBUTES`, so merge in `envDetector`, which reads both.
  */
 export async function createTracingResource(): Promise<Resource> {
-  const { defaultResource, detectResources, envDetector } = await import(
-    "@opentelemetry/resources"
-  );
+  const { defaultResource, detectResources, envDetector } =
+    await import("@opentelemetry/resources");
 
   return defaultResource().merge(detectResources({ detectors: [envDetector] }));
 }

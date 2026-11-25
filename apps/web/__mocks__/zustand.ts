@@ -5,7 +5,6 @@ import { act } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import type * as Zustand from "zustand";
 
-// biome-ignore lint/performance/noBarrelFile: the mock must expose zustand's full API
 export * from "zustand";
 
 const { create: actualCreate } =

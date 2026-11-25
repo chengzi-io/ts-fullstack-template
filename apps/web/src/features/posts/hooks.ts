@@ -1,12 +1,10 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+
 import { authorsListQueryOptions } from "@/features/authors/api.ts";
 import { trpc } from "@/lib/trpc.ts";
 
-import {
-  type PostsListInput,
-  postByIdQueryOptions,
-  postsListQueryOptions,
-} from "./api.ts";
+import { postByIdQueryOptions, postsListQueryOptions } from "./api.ts";
+import type { PostsListInput } from "./api.ts";
 
 /** Keeps the current page on screen while the next one loads. */
 export function usePostsQuery(input: PostsListInput) {

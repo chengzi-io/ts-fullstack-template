@@ -20,7 +20,7 @@ updates:
     # @types/node follows the runtime in .nvmrc, not npm's latest.
     ignore:
       - dependency-name: "@types/node"
-        update-types: [ "version-update:semver-major" ]
+        update-types: ["version-update:semver-major"]
     # A dependency joins the first group it matches. Majors get their own
     # review, one PR each, except families that must move together.
     groups:
@@ -29,11 +29,13 @@ updates:
       opentelemetry:
         patterns:
           - "@opentelemetry/*"
-      # Biome 2.6 rejects Ultracite 7's preset, and Ultracite 8 needs Biome
-      # ^2.6.2, so a Biome minor alone fails `pnpm check`.
-      biome:
+      # Oxlint, Oxfmt, @shadcn/lint, and Ultracite share peer ranges and preset
+      # schemas, so bumping one alone can break `pnpm check`.
+      oxc:
         patterns:
-          - "@biomejs/biome"
+          - "@shadcn/lint"
+          - "oxfmt"
+          - "oxlint"
           - "ultracite"
       minor-and-patch:
         patterns:

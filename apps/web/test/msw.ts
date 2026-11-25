@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import superjson, { type SuperJSONResult } from "superjson";
+import { deserialize, serialize } from "superjson";
+import type { SuperJSONResult } from "superjson";
 
 /** One MSW server per test run; each test adds handlers with `server.use()`. */
 export const server = setupServer();
@@ -39,6 +40,16 @@ const TRPC_ERROR_HTTP_STATUS: Record<string, number> = {
 /** The JSON-RPC number the client expects; only the `data.code` matters here. */
 const TRPC_INTERNAL_SERVER_ERROR = -32_603;
 
+async function readBatchInputs(
+  request: Request
+): Promise<Record<string, SuperJSONResult>> {
+  if (request.method === "GET") {
+    const raw = new URL(request.url).searchParams.get("input");
+    return raw ? JSON.parse(raw) : {};
+  }
+  return await request.json();
+}
+
 /**
  * Answers `httpBatchLink` calls with plain resolvers keyed by procedure path
  * (`"authors.list"`), speaking the same superjson wire format as the API.
@@ -54,9 +65,9 @@ export function trpc(resolvers: Record<string, Resolver>) {
         throw new Error(`No test resolver for tRPC procedure "${path}"`);
       }
       const raw = inputs[String(index)];
-      const input = raw === undefined ? undefined : superjson.deserialize(raw);
+      const input = raw === undefined ? undefined : deserialize(raw);
       try {
-        return { result: { data: superjson.serialize(resolve(input)) } };
+        return { result: { data: serialize(resolve(input)) } };
       } catch (error) {
         if (!(error instanceof TrpcError)) {
           throw error;
@@ -83,14 +94,4 @@ export function trpc(resolvers: Record<string, Resolver>) {
     });
     return HttpResponse.json(results, { status });
   });
-}
-
-async function readBatchInputs(
-  request: Request
-): Promise<Record<string, SuperJSONResult>> {
-  if (request.method === "GET") {
-    const raw = new URL(request.url).searchParams.get("input");
-    return raw ? JSON.parse(raw) : {};
-  }
-  return await request.json();
 }

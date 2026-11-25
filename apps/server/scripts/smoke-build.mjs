@@ -18,7 +18,7 @@ const databasePath = path.join(
   `ts-fullstack-server-smoke-${process.pid}.db`
 );
 
-const findAvailablePort = async () =>
+const findAvailablePort = () =>
   new Promise((resolve, reject) => {
     const probe = createServer();
     probe.once("error", reject);
@@ -115,7 +115,7 @@ const appendOutput = (chunk) => {
 };
 
 for (const stream of [serverProcess.stdout, serverProcess.stderr]) {
-  stream.setEncoding("utf8");
+  stream.setEncoding("utf-8");
   stream.on("data", appendOutput);
 }
 

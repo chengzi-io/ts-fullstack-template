@@ -13,9 +13,7 @@ queryClient.setDefaultOptions({ queries: { retry: false } });
 const emptyPage = { items: [], page: 1, pageCount: 0, pageSize: 20, total: 0 };
 
 test("reports a failing posts.list once, with its request id", async () => {
-  const reported = vi
-    .spyOn(console, "error")
-    .mockImplementation(() => undefined);
+  const reported = vi.spyOn(console, "error").mockReturnValue(undefined);
   try {
     server.use(
       trpc({
@@ -28,10 +26,12 @@ test("reports a failing posts.list once, with its request id", async () => {
     );
     renderApp("/posts");
 
-    expect(await screen.findByText("Failed to load posts")).toBeTruthy();
-    await waitFor(() => expect(reported).toHaveBeenCalledTimes(1));
+    await expect(
+      screen.findByText("Failed to load posts")
+    ).resolves.toBeTruthy();
+    await waitFor(() => expect(reported).toHaveBeenCalledOnce());
 
-    const [, message, detail] = reported.mock.calls[0];
+    const [[, message, detail]] = reported.mock.calls;
     expect(message).toBe("boom");
     expect(detail).toMatchObject({
       context: { key: expect.any(Array), scope: "query" },
@@ -44,9 +44,7 @@ test("reports a failing posts.list once, with its request id", async () => {
 
 test("shows the route error with its request id and recovers on Try again", async () => {
   const user = userEvent.setup();
-  const reported = vi
-    .spyOn(console, "error")
-    .mockImplementation(() => undefined);
+  const reported = vi.spyOn(console, "error").mockReturnValue(undefined);
   const reports = () =>
     reported.mock.calls.filter(([label]) => label === "Unexpected error:");
   let healthy = false;
@@ -70,7 +68,9 @@ test("shows the route error with its request id and recovers on Try again", asyn
     );
     renderApp("/posts");
 
-    expect(await screen.findByText("Something went wrong")).toBeTruthy();
+    await expect(
+      screen.findByText("Something went wrong")
+    ).resolves.toBeTruthy();
     expect(screen.getByText("boom")).toBeTruthy();
     expect(screen.getByText("Request id: req-42")).toBeTruthy();
     // The query cache and the route boundary both see this error.
@@ -80,7 +80,7 @@ test("shows the route error with its request id and recovers on Try again", asyn
     healthy = true;
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(await screen.findByText("No posts yet")).toBeTruthy();
+    await expect(screen.findByText("No posts yet")).resolves.toBeTruthy();
     expect(screen.queryByText("Something went wrong")).toBeNull();
   } finally {
     queryClient.setDefaultOptions({

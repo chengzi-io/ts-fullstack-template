@@ -10,11 +10,8 @@ import { Input } from "@workspace/ui/components/input";
 import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 
-import {
-  type AuthorFormValues,
-  authorFormDefaults,
-  authorFormSchema,
-} from "../model/form.ts";
+import { authorFormDefaults, authorFormSchema } from "../model/form.ts";
+import type { AuthorFormValues } from "../model/form.ts";
 
 interface AuthorFormProps {
   defaultValues?: AuthorFormValues;

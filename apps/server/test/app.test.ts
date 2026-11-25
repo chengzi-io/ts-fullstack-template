@@ -33,14 +33,14 @@ describe("probes", () => {
     const res = await app.request("/healthz");
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ status: "ok" });
+    await expect(res.json()).resolves.toMatchObject({ status: "ok" });
   });
 
   test("reports ready while the database answers", async () => {
     const res = await app.request("/readyz");
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ status: "ready" });
+    await expect(res.json()).resolves.toMatchObject({ status: "ready" });
   });
 
   test("reports not ready once the database is unreachable", async () => {
@@ -49,7 +49,7 @@ describe("probes", () => {
     const res = await app.request("/readyz");
 
     expect(res.status).toBe(503);
-    expect(await res.json()).toMatchObject({ status: "not_ready" });
+    await expect(res.json()).resolves.toMatchObject({ status: "not_ready" });
   });
 
   test("reports not ready while draining for shutdown", async () => {
@@ -58,7 +58,7 @@ describe("probes", () => {
     const res = await app.request("/readyz");
 
     expect(res.status).toBe(503);
-    expect(await res.json()).toMatchObject({ status: "draining" });
+    await expect(res.json()).resolves.toMatchObject({ status: "draining" });
   });
 
   test("logs why it is not ready, without SQL", async () => {
@@ -113,7 +113,7 @@ describe("error contract", () => {
     const res = await app.request("/missing");
 
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({
+    await expect(res.json()).resolves.toStrictEqual({
       error: "NOT_FOUND",
       path: "/missing",
       requestId: res.headers.get("x-request-id"),
@@ -124,7 +124,7 @@ describe("error contract", () => {
     const res = await postJson("/trpc/echo", "x".repeat(BODY_LIMIT_BYTES + 1));
 
     expect(res.status).toBe(413);
-    expect(await res.json()).toEqual({
+    await expect(res.json()).resolves.toStrictEqual({
       error: "PAYLOAD_TOO_LARGE",
       requestId: res.headers.get("x-request-id"),
     });

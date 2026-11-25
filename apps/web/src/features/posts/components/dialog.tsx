@@ -9,8 +9,10 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { useAuthorActions } from "@/features/authors/store.ts";
 import { useDebouncedValue } from "@/hooks/use-debounced-value.ts";
+
 import {
   useAuthorOptionsQuery,
   useCreatePostMutation,
@@ -18,16 +20,13 @@ import {
   useUpdatePostMutation,
 } from "../hooks.ts";
 import {
-  type PostFormValues,
   postFormDefaults,
   toCreatePostInput,
   toUpdatePostInput,
 } from "../model/form.ts";
-import {
-  type PostDialog as PostDialogState,
-  usePostActions,
-  usePostDialog,
-} from "../store.ts";
+import type { PostFormValues } from "../model/form.ts";
+import { usePostActions, usePostDialog } from "../store.ts";
+import type { PostDialog as PostDialogState } from "../store.ts";
 import { PostForm } from "./form.tsx";
 
 const AUTHOR_SEARCH_DEBOUNCE_MS = 300;
@@ -53,7 +52,7 @@ function NeedAuthorPanel({ onCreateAuthor }: { onCreateAuthor: () => void }) {
     <div className="bg-muted/30 flex flex-col gap-3 rounded-2xl border border-dashed px-4 py-4">
       <p className="text-sm font-medium">Create an author first</p>
       <p className="text-muted-foreground text-sm">
-        Every post needs an author. You'll come back here after creating one.
+        Every post needs an author. You’ll come back here after creating one.
       </p>
       <Button className="self-start" onClick={onCreateAuthor} type="button">
         Create author
@@ -71,6 +70,13 @@ function useAuthorPicker(
   postAuthor: AuthorSummary | undefined
 ) {
   const [search, setSearch] = useState("");
+  const [prevEnabled, setPrevEnabled] = useState(enabled);
+  if (enabled !== prevEnabled) {
+    setPrevEnabled(enabled);
+    if (!enabled) {
+      setSearch("");
+    }
+  }
   const debouncedSearch = useDebouncedValue(search, AUTHOR_SEARCH_DEBOUNCE_MS);
   const query = useAuthorOptionsQuery(debouncedSearch, { enabled });
 
@@ -83,12 +89,6 @@ function useAuthorPicker(
     }
     return [postAuthor, ...found];
   }, [matches, postAuthor]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setSearch("");
-    }
-  }, [enabled]);
 
   return {
     authors,
@@ -118,11 +118,9 @@ function useSavePost(dialog: PostDialogState, onSaved: () => void) {
 
   const save = useCallback(
     async (values: PostFormValues) => {
-      if (dialog.mode === "edit") {
-        await updateMutation.mutateAsync(toUpdatePostInput(dialog.id, values));
-      } else {
-        await createMutation.mutateAsync(toCreatePostInput(values));
-      }
+      await (dialog.mode === "edit"
+        ? updateMutation.mutateAsync(toUpdatePostInput(dialog.id, values))
+        : createMutation.mutateAsync(toCreatePostInput(values)));
       onSaved();
     },
     [createMutation, dialog, onSaved, updateMutation]
@@ -146,6 +144,37 @@ function postFormDefaultsFrom(post: Post | undefined): PostFormValues {
   };
 }
 
+function deriveDialogView(params: {
+  authorsQuery: { isError: boolean; isPending: boolean; isSuccess: boolean };
+  busy: boolean;
+  editId: number | null;
+  isEdit: boolean;
+  noAuthorsAtAll: boolean;
+  postQuery: {
+    data: Post | undefined;
+    isError: boolean;
+    isPending: boolean;
+    isSuccess: boolean;
+  };
+}) {
+  const { authorsQuery, busy, editId, isEdit, noAuthorsAtAll, postQuery } =
+    params;
+  const copy = postDialogCopy(isEdit);
+  return {
+    copy,
+    defaults: isEdit ? postFormDefaultsFrom(postQuery.data) : postFormDefaults,
+    formKey: isEdit ? `edit-${editId}` : "create",
+    loadError: authorsQuery.isError || (isEdit && postQuery.isError),
+    loading: authorsQuery.isPending || (isEdit && postQuery.isPending),
+    showEmptyAuthors: !isEdit && noAuthorsAtAll,
+    showForm:
+      authorsQuery.isSuccess &&
+      !noAuthorsAtAll &&
+      (!isEdit || postQuery.isSuccess),
+    submitLabel: busy ? "Saving…" : copy.submitLabel,
+  };
+}
+
 /**
  * Controlled by the posts store; mounted by each route that opens it.
  * Authors/post queries run only while open (and edit id present for byId).
@@ -158,7 +187,6 @@ export function PostDialog() {
   const isOpen = postDialog.mode !== "closed";
   const isEdit = postDialog.mode === "edit";
   const editId = postDialog.mode === "edit" ? postDialog.id : null;
-  const copy = postDialogCopy(isEdit);
 
   const postQuery = usePostQuery(editId, { enabled: isOpen && isEdit });
   const {
@@ -172,12 +200,6 @@ export function PostDialog() {
     error: saveError,
     save: handleSubmit,
   } = useSavePost(postDialog, close);
-
-  const showEmptyAuthors = !isEdit && noAuthorsAtAll;
-  const showForm =
-    authorsQuery.isSuccess &&
-    !noAuthorsAtAll &&
-    (!isEdit || postQuery.isSuccess);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -193,14 +215,23 @@ export function PostDialog() {
     openCreateAuthor({ onCreated: openCreate });
   }, [openCreate, openCreateAuthor]);
 
-  const defaults = isEdit
-    ? postFormDefaultsFrom(postQuery.data)
-    : postFormDefaults;
-
-  const formKey = isEdit ? `edit-${editId}` : "create";
-  const submitLabel = busy ? "Saving…" : copy.submitLabel;
-  const loading = authorsQuery.isPending || (isEdit && postQuery.isPending);
-  const loadError = authorsQuery.isError || (isEdit && postQuery.isError);
+  const {
+    copy,
+    defaults,
+    formKey,
+    loadError,
+    loading,
+    showEmptyAuthors,
+    showForm,
+    submitLabel,
+  } = deriveDialogView({
+    authorsQuery,
+    busy,
+    editId,
+    isEdit,
+    noAuthorsAtAll,
+    postQuery,
+  });
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={isOpen}>

@@ -1,6 +1,8 @@
-import { initTRPC, type TRPC_ERROR_CODE_KEY, TRPCError } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
+import type { TRPC_ERROR_CODE_KEY } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
+
 import type { Context } from "./context.js";
 import {
   ConflictError,
@@ -8,6 +10,20 @@ import {
   NotFoundError,
   rootCause,
 } from "./errors.js";
+
+/** Expected repo failures → client-facing codes, in one place. */
+function domainErrorCode(error: unknown): TRPC_ERROR_CODE_KEY | null {
+  if (error instanceof NotFoundError) {
+    return "NOT_FOUND";
+  }
+  if (error instanceof ConflictError) {
+    return "CONFLICT";
+  }
+  if (error instanceof InvalidReferenceError) {
+    return "BAD_REQUEST";
+  }
+  return null;
+}
 
 const t = initTRPC.context<Context>().create({
   errorFormatter({ ctx, error, shape }) {
@@ -64,20 +80,6 @@ const procedureLogger = t.middleware(async ({ ctx, next, path, type }) => {
 
   return result;
 });
-
-/** Expected repo failures → client-facing codes, in one place. */
-function domainErrorCode(error: unknown): TRPC_ERROR_CODE_KEY | null {
-  if (error instanceof NotFoundError) {
-    return "NOT_FOUND";
-  }
-  if (error instanceof ConflictError) {
-    return "CONFLICT";
-  }
-  if (error instanceof InvalidReferenceError) {
-    return "BAD_REQUEST";
-  }
-  return null;
-}
 
 const domainErrors = t.middleware(async ({ next }) => {
   const result = await next();

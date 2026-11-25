@@ -6,7 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { createDb, type Database } from "./index.js";
+import { createDb } from "./index.js";
+import type { Database } from "./index.js";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));

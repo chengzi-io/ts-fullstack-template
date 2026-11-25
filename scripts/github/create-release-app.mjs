@@ -15,7 +15,7 @@ import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 
 function gh(args, input) {
-  const result = spawnSync("gh", args, { encoding: "utf8", input });
+  const result = spawnSync("gh", args, { encoding: "utf-8", input });
   if (result.status !== 0) {
     throw new Error(`gh ${args.join(" ")} failed:\n${result.stderr}`);
   }
@@ -34,7 +34,9 @@ const newAppUrl =
 
 const state = randomBytes(16).toString("hex");
 const server = createServer();
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+await new Promise((resolve) => {
+  server.listen(0, "127.0.0.1", resolve);
+});
 const base = `http://127.0.0.1:${server.address().port}`;
 
 const manifest = {

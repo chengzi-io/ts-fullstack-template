@@ -1,12 +1,11 @@
-import {
-  type ColumnDef,
-  flexRender,
-  type RowData,
-  tableFeatures,
-  useTable,
-} from "@tanstack/react-table";
+import { flexRender, tableFeatures, useTable } from "@tanstack/react-table";
+import type { ColumnDef, RowData } from "@tanstack/react-table";
 import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@workspace/ui/components/input-group";
 import {
   Select,
   SelectContent,
@@ -24,7 +23,8 @@ import {
 } from "@workspace/ui/components/table";
 import { cn } from "@workspace/ui/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
-import { type ChangeEvent, type ReactNode, useCallback } from "react";
+import { useCallback } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50] as const;
 
@@ -35,7 +35,7 @@ export type DataTableFeatures = typeof dataTableFeatures;
 
 export interface DataTableProps<TData extends RowData> {
   // createColumnHelper yields mixed TValue columns.
-  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous column value types
+  // oxlint-disable-next-line typescript/no-explicit-any -- heterogeneous column value types
   columns: ColumnDef<DataTableFeatures, TData, any>[];
   /** The current page's rows only — paging and search happen on the server. */
   data: TData[];
@@ -83,14 +83,14 @@ function PageSizeSelect({
   );
 
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex items-center gap-2 text-xs tabular-nums">
       <span className="text-muted-foreground whitespace-nowrap">
         Rows per page
       </span>
       <Select onValueChange={handleValueChange} value={String(pageSize)}>
         <SelectTrigger
           aria-label="Rows per page"
-          className="min-w-16 px-2.5 tabular-nums"
+          className="min-w-16"
           size="sm"
         >
           <SelectValue />
@@ -156,20 +156,18 @@ export function DataTable<TData extends RowData>({
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         {onSearchChange ? (
-          <div className="relative">
-            <SearchIcon
-              aria-hidden
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
-            />
-            <Input
+          <InputGroup className="h-7 w-48 sm:w-56">
+            <InputGroupAddon>
+              <SearchIcon aria-hidden className="size-3.5" />
+            </InputGroupAddon>
+            <InputGroupInput
               aria-label={searchPlaceholder}
-              className="h-7 w-48 pl-8 text-sm sm:w-56"
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
               type="search"
               value={search}
             />
-          </div>
+          </InputGroup>
         ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -181,15 +179,12 @@ export function DataTable<TData extends RowData>({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                className="border-border bg-muted/40 hover:bg-muted/40 border-b"
-                key={headerGroup.id}
-              >
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     className={cn(
                       "h-9",
-                      header.column.id === "actions" && "w-10 pr-4"
+                      header.column.id === "actions" && "w-10"
                     )}
                     key={header.id}
                   >
@@ -207,18 +202,9 @@ export function DataTable<TData extends RowData>({
           <TableBody>
             {rows.length > 0 ? (
               rows.map((row) => (
-                <TableRow
-                  className="border-border hover:bg-muted/30 border-b transition-colors duration-100 last:border-b-0"
-                  key={row.id}
-                >
+                <TableRow key={row.id}>
                   {row.getAllCells().map((cell) => (
-                    <TableCell
-                      className={cn(
-                        "py-3",
-                        cell.column.id === "actions" && "pr-4"
-                      )}
-                      key={cell.id}
-                    >
+                    <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -228,12 +214,11 @@ export function DataTable<TData extends RowData>({
                 </TableRow>
               ))
             ) : (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  className="text-muted-foreground h-24 text-center text-sm"
-                  colSpan={columns.length}
-                >
-                  {emptyMessage}
+              <TableRow>
+                <TableCell className="h-24" colSpan={columns.length}>
+                  <div className="text-muted-foreground text-center text-sm">
+                    {emptyMessage}
+                  </div>
                 </TableCell>
               </TableRow>
             )}

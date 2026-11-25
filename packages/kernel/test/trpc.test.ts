@@ -82,7 +82,7 @@ describe("domain errors", () => {
   });
 
   test("are logged as warnings with the mapped code", async () => {
-    await expect(caller.missing()).rejects.toThrow();
+    await expect(caller.missing()).rejects.toThrow("Thing not found");
 
     expect(entries).toMatchObject([
       {

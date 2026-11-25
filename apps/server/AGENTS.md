@@ -1,14 +1,13 @@
 # server
 
-Thin **HTTP host**: env, process lifecycle, Hono middleware, mount tRPC.
-No domain routers, no Drizzle schema, no React.
+Thin **HTTP host**: env, process lifecycle, Hono middleware, mount tRPC. No domain routers, no Drizzle schema, no React.
 
 Workspace map: root `AGENTS.md`. Routers: `@workspace/api`. Data: `@workspace/db`.
 
 ## Responsibility
 
 | Owns | Does not own |
-|------|----------------|
+| --- | --- |
 | `createEnv` (t3-env) + boot wiring | Zod domain shapes / `*Repo` impl |
 | `createApp` middleware + probes | tRPC procedure logic |
 | pino logger, access log, graceful shutdown | Browser / Vite |
@@ -37,11 +36,11 @@ flowchart TB
   server -.->|"must not"| forbidden["modules · SQL · React"]
 ```
 
-| Concern | Where |
-|---------|--------|
+| Concern                             | Where              |
+| ----------------------------------- | ------------------ |
 | Procedures, tables, repos, wire Zod | `modules/<domain>` |
-| Composition (`appRouter`) | `@workspace/api` |
-| HTTP host | this app |
+| Composition (`appRouter`)           | `@workspace/api`   |
+| HTTP host                           | this app           |
 
 ## Layout
 
@@ -68,24 +67,13 @@ scripts/smoke-build.mjs
 
 ## Shutdown
 
-SIGTERM/SIGINT (or a fatal error) → `/readyz` answers 503 → wait
-`SHUTDOWN_DRAIN_MS` → close HTTP (in-flight requests finish) → close DB →
-flush and stop tracing (if on) → exit. A failed DB or tracing close makes the
-exit code 1. `SHUTDOWN_TIMEOUT_MS` force-closes sockets and exits 1 if any step
-stalls, including a hanging span flush.
+SIGTERM/SIGINT (or a fatal error) → `/readyz` answers 503 → wait `SHUTDOWN_DRAIN_MS` → close HTTP (in-flight requests finish) → close DB → flush and stop tracing (if on) → exit. A failed DB or tracing close makes the exit code 1. `SHUTDOWN_TIMEOUT_MS` force-closes sockets and exits 1 if any step stalls, including a hanging span flush.
 
 ## Tracing
 
-Opt-in, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: `startTracing` then
-loads the SDK/exporter and registers a `NodeTracerProvider` with a
-`BatchSpanProcessor` (OTLP/HTTP); with the variable unset nothing from the SDK
-is imported and the API stays no-op. `@hono/otel` is the first middleware;
-`index.ts` registers the provider before the app and the DB are created.
-`lib/logger.ts` adds `trace_id` / `span_id` / `trace_flags` to every line from
-the active span.
+Opt-in, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: `startTracing` then loads the SDK/exporter and registers a `NodeTracerProvider` with a `BatchSpanProcessor` (OTLP/HTTP); with the variable unset nothing from the SDK is imported and the API stays no-op. `@hono/otel` is the first middleware; `index.ts` registers the provider before the app and the DB are created. `lib/logger.ts` adds `trace_id` / `span_id` / `trace_flags` to every line from the active span.
 
-No auto-instrumentation: `tsdown` emits an ESM bundle, so the usual
-`--require`/`--import` patches of `http` and friends do not apply here.
+No auto-instrumentation: `tsdown` emits an ESM bundle, so the usual `--require`/`--import` patches of `http` and friends do not apply here.
 
 ## Middleware order
 
@@ -93,17 +81,17 @@ No auto-instrumentation: `tsdown` emits an ESM bundle, so the usual
 
 ## Endpoints
 
-| Path | Role |
-|------|------|
-| `GET /healthz` | Liveness |
-| `GET /readyz` | Readiness (`db.ping()` → 503 if down) |
-| `/trpc/*` | `appRouter` |
-| `GET /` | ok text |
+| Path           | Role                                  |
+| -------------- | ------------------------------------- |
+| `GET /healthz` | Liveness                              |
+| `GET /readyz`  | Readiness (`db.ping()` → 503 if down) |
+| `/trpc/*`      | `appRouter`                           |
+| `GET /`        | ok text                               |
 
 ## Env
 
 | Var | Owner file | Notes |
-|-----|------------|--------|
+| --- | --- | --- |
 | `DATABASE_URL` | `packages/db/.env` | required |
 | `DATABASE_AUTH_TOKEN` | `packages/db/.env` | remote only |
 | `PORT`, `CORS_ORIGIN`, `LOG_LEVEL`, timeouts | `apps/server/.env` | optional defaults |
@@ -115,15 +103,12 @@ No auto-instrumentation: `tsdown` emits an ESM bundle, so the usual
 | `OTEL_RESOURCE_ATTRIBUTES` | platform env | extra resource attributes, `key=value,...` |
 | `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | platform env | read by the exporter / SDK; not declared in `env.ts` |
 
-The SDK (2.x) default resource ignores `OTEL_SERVICE_NAME` and
-`OTEL_RESOURCE_ATTRIBUTES`; `lib/tracing.ts` merges in `envDetector`, which
-reads both.
+The SDK (2.x) default resource ignores `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES`; `lib/tracing.ts` merges in `envDetector`, which reads both.
 
 ## Testing
 
 - Prefer `createApp(...)` + `app.request()` — no real listen port
-- Use `test/app.ts` `createTestApp()` — silent logger, temp DB from `createTestDb()`,
-  and a tiny test router: host tests never depend on a business module
+- Use `test/app.ts` `createTestApp()` — silent logger, temp DB from `createTestDb()`, and a tiny test router: host tests never depend on a business module
 - Shutdown tests inject server/DB/exit/timers — never real `process.exit` in unit tests
 - Do not use developer `.env` or `local.db`
 - `pnpm --filter server test` includes build smoke (`GET /healthz` on `dist`)
