@@ -1,4 +1,6 @@
-import { createRouter, type RouterHistory } from "@tanstack/react-router";
+import { createRouter } from "@tanstack/react-router";
+import type { RouterHistory } from "@tanstack/react-router";
+
 import { RouteError } from "@/components/route-error.tsx";
 import { reportError } from "@/lib/report-error.ts";
 import { routeTree } from "@/routeTree.gen.ts";

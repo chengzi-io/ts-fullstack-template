@@ -1,13 +1,11 @@
 # Tech stack
 
-What the template ships with, and where each piece lives. Only what is
-installed belongs here: a planned tool joins the list in the change that adds
-it. Versions live in the `package.json` files, not here.
+What the template ships with, and where each piece lives. Only what is installed belongs here: a planned tool joins the list in the change that adds it. Versions live in the `package.json` files, not here.
 
 ## Web — `apps/web`
 
 | Tool | Role |
-|------|------|
+| --- | --- |
 | React 19 | UI runtime |
 | Vite | Dev server and bundler |
 | TanStack Router | File-based routes; list state in URL search params |
@@ -20,18 +18,18 @@ it. Versions live in the `package.json` files, not here.
 
 ## Design system — `packages/ui`
 
-| Tool | Role |
-|------|------|
+| Tool                    | Role                                  |
+| ----------------------- | ------------------------------------- |
 | shadcn/ui (`base-rhea`) | Primitives, added with the shadcn CLI |
-| Base UI | Accessible primitives under shadcn |
-| Tailwind CSS v4 | Tokens and utilities |
-| DM Sans | Variable font |
-| Lucide | Icons |
+| Base UI                 | Accessible primitives under shadcn    |
+| Tailwind CSS v4         | Tokens and utilities                  |
+| DM Sans                 | Variable font                         |
+| Lucide                  | Icons                                 |
 
 ## API — `apps/server`, `packages/api`, `packages/kernel`, `modules/*`
 
 | Tool | Role |
-|------|------|
+| --- | --- |
 | Hono | HTTP host (`apps/server`) |
 | tRPC 11 | `AppRouter` (`packages/api`), module routers, kernel procedures |
 | SuperJSON | Dates and richer types over the wire |
@@ -40,24 +38,24 @@ it. Versions live in the `package.json` files, not here.
 
 ## Data — `packages/db`, `modules/*/src/schema.ts`
 
-| Tool | Role |
-|------|------|
+| Tool                      | Role                                             |
+| ------------------------- | ------------------------------------------------ |
 | Drizzle ORM / drizzle-kit | Schema, queries, `push` / `generate` / `migrate` |
-| libSQL | Local SQLite file or Turso |
+| libSQL                    | Local SQLite file or Turso                       |
 
 ## Observability — `apps/server`
 
-| Tool | Role |
-|------|------|
-| pino | JSON logs with redaction; `pino-pretty` in development |
+| Tool          | Role                                                       |
+| ------------- | ---------------------------------------------------------- |
+| pino          | JSON logs with redaction; `pino-pretty` in development     |
 | OpenTelemetry | Opt-in OTLP tracing; logs inside a span carry its trace id |
 
 ## Quality
 
 | Tool | Role |
-|------|------|
+| --- | --- |
 | TypeScript | Strict mode in every package |
-| Biome (Ultracite preset) | Format, lint, import boundaries |
+| Oxlint + Oxfmt (Ultracite, `@shadcn/lint`) | Format, lint, import boundaries, design-system rules |
 | Vitest | Unit and integration tests |
 | Testing Library + jsdom | Web pages rendered like a user sees them |
 | MSW | tRPC answered at the network in web tests |
@@ -66,19 +64,19 @@ it. Versions live in the `package.json` files, not here.
 
 ## Repository
 
-| Tool | Role |
-|------|------|
-| pnpm workspaces | `apps/*`, `modules/*`, `packages/*` |
-| Turborepo | `dev`, `build`, `typecheck`, `test` with caching |
-| lefthook | Pre-commit fix, commit-msg lint |
-| commitlint | Conventional Commits |
-| release-please | Release PRs, tags, `CHANGELOG.md` |
-| Dependabot | Dependency and GitHub Actions updates |
+| Tool            | Role                                             |
+| --------------- | ------------------------------------------------ |
+| pnpm workspaces | `apps/*`, `modules/*`, `packages/*`              |
+| Turborepo       | `dev`, `build`, `typecheck`, `test` with caching |
+| lefthook        | Pre-commit fix, commit-msg lint                  |
+| commitlint      | Conventional Commits                             |
+| release-please  | Release PRs, tags, `CHANGELOG.md`                |
+| Dependabot      | Dependency and GitHub Actions updates            |
 
 ## Development only — `apps/web/src/components/dev-tools.tsx`
 
-| Tool | Role |
-|------|------|
-| Router Devtools | Route tree and matches |
-| Query Devtools | Cache and mutations |
-| Agentation | UI notes → markdown for AI |
+| Tool            | Role                       |
+| --------------- | -------------------------- |
+| Router Devtools | Route tree and matches     |
+| Query Devtools  | Cache and mutations        |
+| Agentation      | UI notes → markdown for AI |

@@ -4,8 +4,10 @@ pre-commit:
       glob:
         - "**/*.js"
         - "**/*.jsx"
+        - "**/*.mjs"
         - "**/*.ts"
         - "**/*.tsx"
+        - "**/*.mts"
         - "**/*.json"
         - "**/*.jsonc"
         - "**/*.css"

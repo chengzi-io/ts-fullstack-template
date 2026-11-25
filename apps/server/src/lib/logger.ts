@@ -1,5 +1,6 @@
 import { trace } from "@opentelemetry/api";
-import pino, { type DestinationStream } from "pino";
+import pino from "pino";
+import type { DestinationStream } from "pino";
 
 export type { Logger } from "pino";
 

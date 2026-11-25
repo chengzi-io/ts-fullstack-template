@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, test } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -23,7 +24,7 @@ const git = (cwd, ...args) =>
   execFileSync(
     "git",
     ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
-    { cwd, encoding: "utf8" }
+    { cwd, encoding: "utf-8" }
   );
 
 // A fresh "Use this template" copy of the working tree, with `origin` set.
@@ -44,7 +45,7 @@ function createProject(origin, { released = false } = {}) {
   }
   if (released) {
     for (const file of ["package.json", ".release-please-manifest.json"]) {
-      const text = readFileSync(path.join(dir, file), "utf8");
+      const text = readFileSync(path.join(dir, file), "utf-8");
       writeFileSync(
         path.join(dir, file),
         text.replace(versionField, '$<key>"0.1.0"')
@@ -70,14 +71,14 @@ function initProject(dir) {
   chmodSync(path.join(bin, "gh"), 0o755);
   const result = spawnSync("node", ["scripts/init-project.mjs"], {
     cwd: dir,
-    encoding: "utf8",
+    encoding: "utf-8",
     env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` },
   });
   rmSync(bin, { recursive: true });
   return result;
 }
 
-const read = (dir, file) => readFileSync(path.join(dir, file), "utf8");
+const read = (dir, file) => readFileSync(path.join(dir, file), "utf-8");
 
 afterEach(() => {
   for (const dir of temps.splice(0)) {
@@ -96,8 +97,8 @@ test.each([
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
   const pkg = JSON.parse(read(dir, "package.json"));
-  expect([pkg.name, pkg.version]).toEqual(["my-app", "0.0.0"]);
-  expect(JSON.parse(read(dir, ".release-please-manifest.json"))).toEqual({
+  expect([pkg.name, pkg.version]).toStrictEqual(["my-app", "0.0.0"]);
+  expect(JSON.parse(read(dir, ".release-please-manifest.json"))).toStrictEqual({
     ".": "0.0.0",
   });
   expect(existsSync(path.join(dir, "CHANGELOG.md"))).toBe(false);
@@ -113,7 +114,7 @@ test.each([
   const leftovers = spawnSync(
     "git",
     ["grep", "-n", "-I", "-e", "ts-fullstack-template", "-e", "template-only"],
-    { cwd: dir, encoding: "utf8" }
+    { cwd: dir, encoding: "utf-8" }
   );
   expect(leftovers.stdout).toBe("");
 });

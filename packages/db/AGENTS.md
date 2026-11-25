@@ -1,20 +1,19 @@
 # @workspace/db
 
-Database plumbing shared by every module: the client, the transaction-aware
-`Executor` type, constraint helpers, the test database, and drizzle-kit
-config + migrations. **Tables and queries live in `modules/<domain>`**, not here.
-No Hono / tRPC / React. No `process.env` inside `createDb`.
-Drizzle is the stable release line, pinned exactly — not 1.0 RC (DECISIONS #17).
+Database plumbing shared by every module: the client, the transaction-aware `Executor` type, constraint helpers, the test database, and drizzle-kit config + migrations. **Tables and queries live in `modules/<domain>`**, not here. No Hono / tRPC / React. No `process.env` inside `createDb`. Drizzle is the stable release line, pinned exactly — not 1.0 RC (DECISIONS #17).
 
 ## Public surface
 
 | Import | What |
-|--------|------|
+| --- | --- |
 | `@workspace/db` | `createDb(config)` → `ping` / `close`; `Database`; `Executor` (db or transaction); `isForeignKeyViolation(error)`; `containsText(column, q)` |
 | `@workspace/db/testing` | `createTestDb()` — tests only |
 
 ```ts
-const db = createDb({ url: env.DATABASE_URL, authToken: env.DATABASE_AUTH_TOKEN });
+const db = createDb({
+  url: env.DATABASE_URL,
+  authToken: env.DATABASE_AUTH_TOKEN,
+});
 await db.ping();
 db.close();
 ```
@@ -22,24 +21,18 @@ db.close();
 ## Constraints
 
 - The host validates env and passes config into `createDb({ url, authToken? })`
-- Relative `file:` paths use **process.cwd()**; template `.env` uses
-  `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share
-  the monorepo-root `local.db`
-- `isForeignKeyViolation` matches SQLite's message, not `extendedCode`:
-  an `onDelete: "restrict"` delete reports `SQLITE_CONSTRAINT_TRIGGER`
-- Never depend on `@workspace/kernel`, a module, Hono, or React — this package
-  sits at the bottom
+- Relative `file:` paths use **process.cwd()**; template `.env` uses `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share the monorepo-root `local.db`
+- `isForeignKeyViolation` matches SQLite's message, not `extendedCode`: an `onDelete: "restrict"` delete reports `SQLITE_CONSTRAINT_TRIGGER`
+- Never depend on `@workspace/kernel`, a module, Hono, or React — this package sits at the bottom
 
 ## Schema discovery
 
-Every module keeps its tables in `modules/<name>/src/schema.ts`. Both
-`drizzle.config.ts` and `createTestDb()` glob that path, so adding a module
-needs no change here.
+Every module keeps its tables in `modules/<name>/src/schema.ts`. Both `drizzle.config.ts` and `createTestDb()` glob that path, so adding a module needs no change here.
 
 ## Migrations
 
 | Phase | Command | Commit `drizzle/`? |
-|-------|---------|--------------------|
+| --- | --- | --- |
 | Local / shape still moving | `pnpm db:push` | No |
 | Shape stable (team / CI / prod) | `pnpm db:generate` → migrate | Yes |
 | Clone with migrations | `pnpm db:migrate` only | Apply existing |
@@ -55,19 +48,17 @@ Demo schema: **push only** — do not commit demo migrations.
 
 ## Testing
 
-- `createTestDb()` gives each caller a temp SQLite file with every module's
-  current tables (`drizzle-kit export`, not migrations); with no modules it is empty
+- `createTestDb()` gives each caller a temp SQLite file with every module's current tables (`drizzle-kit export`, not migrations); with no modules it is empty
 - `dispose()` closes the client and deletes the file with `-wal` / `-shm`; it also runs when schema setup fails
 - Modules use it through `createTestContext()` (`@workspace/kernel/testing`)
 - Do not hit developer `local.db` or remote DBs
 
 ## Switching away from libSQL
 
-Modules see only `Executor` and the helpers above, so a new database stays
-mostly inside this package. What is SQLite / libSQL specific today:
+Modules see only `Executor` and the helpers above, so a new database stays mostly inside this package. What is SQLite / libSQL specific today:
 
 | Place | Coupling | With Postgres (for example) |
-|-------|----------|-----------------------------|
+| --- | --- | --- |
 | `src/index.ts` `createDb` | `@libsql/client` + `drizzle-orm/libsql` | the driver's client and drizzle adapter; keep `ping` / `close` |
 | `isForeignKeyViolation` | `LibsqlError` + SQLite's message | the driver's error code (Postgres `23503`); keep the `cause` walk |
 | `containsText` | `instr(lower(…))` | `ILIKE` with `%` / `_` escaped, or `strpos(lower(…))` |
@@ -77,11 +68,7 @@ mostly inside this package. What is SQLite / libSQL specific today:
 | `apps/server/src/env.ts` | accepted URL schemes; the `file:` single-instance guard | the new schemes; drop the guard if there is no file mode |
 | `apps/server` `package.json` + `tsdown.config.ts` | `@libsql/client` is a runtime dependency kept `external` (the bundle inlines `@workspace/*`, not native drivers) | the same for the new driver |
 
-Then: regenerate migrations (the demo has none), keep the module tests
-green — they assert behavior (409 on a restricted delete, 400 on a missing
-reference, search matching), so they are the acceptance test for the new
-driver. SQLite enforces foreign keys only when the connection enables them;
-libSQL does, and the restrict tests would fail if that changed.
+Then: regenerate migrations (the demo has none), keep the module tests green — they assert behavior (409 on a restricted delete, 400 on a missing reference, search matching), so they are the acceptance test for the new driver. SQLite enforces foreign keys only when the connection enables them; libSQL does, and the restrict tests would fail if that changed.
 
 ## Commands
 

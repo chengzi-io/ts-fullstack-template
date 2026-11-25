@@ -2,12 +2,11 @@ import { Button } from "@workspace/ui/components/button";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import {
-  DataTable,
-  type DataTableProps,
-} from "@/components/blocks/data-table.tsx";
+import { DataTable } from "@/components/blocks/data-table.tsx";
+import type { DataTableProps } from "@/components/blocks/data-table.tsx";
 
-import { type Author, createAuthorColumns } from "./columns.tsx";
+import { createAuthorColumns } from "./columns.tsx";
+import type { Author } from "./columns.tsx";
 
 function getAuthorRowId(row: Author) {
   return String(row.id);

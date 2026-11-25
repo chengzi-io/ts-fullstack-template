@@ -37,7 +37,9 @@ describe("posts", () => {
       body: null,
       title: "Hello",
     });
-    await expect(caller.posts.byId({ id: post.id })).resolves.toEqual(post);
+    await expect(caller.posts.byId({ id: post.id })).resolves.toStrictEqual(
+      post
+    );
   });
 
   test("rejects a post for an unknown author", async () => {
@@ -121,7 +123,9 @@ describe("posts", () => {
       title: "Hello",
     });
 
-    await expect(caller.posts.delete({ id })).resolves.toEqual({ ok: true });
+    await expect(caller.posts.delete({ id })).resolves.toStrictEqual({
+      ok: true,
+    });
     await expect(caller.posts.byId({ id })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });

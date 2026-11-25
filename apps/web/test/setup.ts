@@ -15,10 +15,14 @@ vi.mock("zustand");
 // jsdom has no matchMedia; the theme provider reads the system color scheme.
 window.matchMedia = (query: string) =>
   ({
-    addEventListener: () => undefined,
+    addEventListener: () => {
+      /* noop */
+    },
     matches: false,
     media: query,
-    removeEventListener: () => undefined,
+    removeEventListener: () => {
+      /* noop */
+    },
   }) as unknown as MediaQueryList;
 
 beforeAll(() => {

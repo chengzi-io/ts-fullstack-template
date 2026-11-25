@@ -17,23 +17,24 @@ const SETTLE_WINDOWS = 20;
 // fires inside the asserted window.
 const IDLE_ASSERT_MS = 500;
 
+function paginate<T>(items: T[], input: unknown) {
+  const { page: number = 1, pageSize = 20 } = (input ?? {}) as {
+    page?: number;
+    pageSize?: number;
+  };
+  return {
+    items: items.slice((number - 1) * pageSize, number * pageSize),
+    page: number,
+    pageCount: Math.ceil(items.length / pageSize),
+    pageSize,
+    total: items.length,
+  };
+}
+
 /** In-memory stand-in for the procedures the posts page calls. */
 function serveBackend() {
   const authors: Author[] = [];
   const posts: Post[] = [];
-  const page = <T,>(items: T[], input: unknown) => {
-    const { page: number = 1, pageSize = 20 } = (input ?? {}) as {
-      page?: number;
-      pageSize?: number;
-    };
-    return {
-      items: items.slice((number - 1) * pageSize, number * pageSize),
-      page: number,
-      pageCount: Math.ceil(items.length / pageSize),
-      pageSize,
-      total: items.length,
-    };
-  };
 
   server.use(
     trpc({
@@ -51,7 +52,7 @@ function serveBackend() {
               author.name.toLowerCase().includes(needle)
             )
           : authors;
-        return page(matches, input);
+        return paginate(matches, input);
       },
       "posts.byId": (input) => {
         const { id } = input as RouterInputs["posts"]["byId"];
@@ -77,7 +78,7 @@ function serveBackend() {
         posts.unshift(post);
         return post;
       },
-      "posts.list": (input) => page(posts, input),
+      "posts.list": (input) => paginate(posts, input),
       "posts.update": (input) => {
         const { id, ...patch } = input as RouterInputs["posts"]["update"];
         const post = posts.find((candidate) => candidate.id === id);
@@ -95,7 +96,9 @@ function serveBackend() {
 
 function waitIdle(ms = IDLE_WINDOW_MS) {
   return act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, ms));
+    await new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   });
 }
 
@@ -160,7 +163,7 @@ test("creates the first post, creating its author on the way", async () => {
   await waitFor(() => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
-  expect(await screen.findByText("Hello")).toBeTruthy();
+  await expect(screen.findByText("Hello")).resolves.toBeTruthy();
   expect(backend.posts).toMatchObject([
     { author: { name: "Ada" }, body: "First words", title: "Hello" },
   ]);
@@ -191,7 +194,9 @@ test("does not create a post without an author", async () => {
     within(postDialog).getByRole("button", { name: "Create post" })
   );
 
-  expect(await within(postDialog).findByText("Choose an author")).toBeTruthy();
+  await expect(
+    within(postDialog).findByText("Choose an author")
+  ).resolves.toBeTruthy();
   expect(backend.posts).toHaveLength(0);
 });
 
@@ -264,12 +269,12 @@ test("pages through more posts than fit on one page", async () => {
   }
   const router = renderApp("/posts");
 
-  expect(await screen.findByText("Post 25")).toBeTruthy();
+  await expect(screen.findByText("Post 25")).resolves.toBeTruthy();
   expect(screen.queryByText("Post 5")).toBeNull();
 
   await user.click(screen.getByRole("button", { name: "Next page" }));
 
-  expect(await screen.findByText("Post 5")).toBeTruthy();
+  await expect(screen.findByText("Post 5")).resolves.toBeTruthy();
   expect(screen.queryByText("Post 25")).toBeNull();
   expect(router.state.location.search).toMatchObject({ page: 2 });
 });

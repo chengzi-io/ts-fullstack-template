@@ -11,9 +11,7 @@ type Author = RouterOutputs["authors"]["byId"];
 
 test("keeps the delete dialog open with the server's reason", async () => {
   const user = userEvent.setup();
-  const reported = vi
-    .spyOn(console, "error")
-    .mockImplementation(() => undefined);
+  const reported = vi.spyOn(console, "error").mockReturnValue(undefined);
   const reports = () =>
     reported.mock.calls.filter(([label]) => label === "Unexpected error:");
   const authors: Author[] = [{ createdAt: new Date(), id: 1, name: "Ada" }];
@@ -46,13 +44,13 @@ test("keeps the delete dialog open with the server's reason", async () => {
     });
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-    expect(
-      await within(dialog).findByText("Author is still in use")
-    ).toBeTruthy();
+    await expect(
+      within(dialog).findByText("Author is still in use")
+    ).resolves.toBeTruthy();
     expect(screen.getByRole("dialog", { name: "Delete author?" })).toBeTruthy();
     expect(screen.getByText("Ada")).toBeTruthy();
     // Shown inline, so it is no unexpected error.
-    expect(reports()).toEqual([]);
+    expect(reports()).toStrictEqual([]);
   } finally {
     reported.mockRestore();
   }

@@ -20,11 +20,8 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-import {
-  type PostFormValues,
-  postFormDefaults,
-  postFormSchema,
-} from "../model/form.ts";
+import { postFormDefaults, postFormSchema } from "../model/form.ts";
+import type { PostFormValues } from "../model/form.ts";
 
 interface AuthorComboboxProps {
   authors: AuthorSummary[];

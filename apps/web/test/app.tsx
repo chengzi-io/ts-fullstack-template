@@ -4,7 +4,9 @@ import { Profiler } from "react";
 
 import { createAppRouter } from "@/lib/router.ts";
 
-const ignoreCommit = () => undefined;
+const ignoreCommit = () => {
+  /* noop */
+};
 
 /**
  * The real app — routes, URL search params, shell, providers — at `url`.

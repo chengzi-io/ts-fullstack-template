@@ -1,6 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 const SERVER_PORT = 3100;

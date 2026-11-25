@@ -11,10 +11,8 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useCallback } from "react";
 
-import {
-  ColumnHeader,
-  type DataTableFeatures,
-} from "@/components/blocks/data-table.tsx";
+import { ColumnHeader } from "@/components/blocks/data-table.tsx";
+import type { DataTableFeatures } from "@/components/blocks/data-table.tsx";
 
 export type Author = RouterOutputs["authors"]["list"]["items"][number];
 

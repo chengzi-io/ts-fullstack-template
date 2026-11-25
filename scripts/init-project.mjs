@@ -25,13 +25,13 @@ const templateOnly =
   /<!-- template-only -->[\s\S]*?<!-- \/template-only -->\n+/gu;
 
 const run = (command, args) =>
-  execFileSync(command, args, { encoding: "utf8" }).trim();
+  execFileSync(command, args, { encoding: "utf-8" }).trim();
 
 // Every pattern must match: one that no longer does means the template
 // changed under this script. A match may still change nothing — an
 // unreleased template is already at 0.0.0.
 function edit(file, ...replacements) {
-  let text = readFileSync(file, "utf8");
+  let text = readFileSync(file, "utf-8");
   for (const [pattern, replacement] of replacements) {
     const found =
       typeof pattern === "string"
@@ -66,7 +66,7 @@ if (repo === templateRepo) {
 }
 const login = run("gh", ["api", "user", "--jq", ".login"]);
 const { version: templateVersion } = JSON.parse(
-  readFileSync("package.json", "utf8")
+  readFileSync("package.json", "utf-8")
 );
 
 edit(
@@ -104,7 +104,7 @@ const grep = spawnSync(
     ".",
     ...ownFiles.map((file) => `:!${file}`),
   ],
-  { encoding: "utf8" }
+  { encoding: "utf-8" }
 );
 if (grep.status > 1) {
   throw new Error(`git grep failed:\n${grep.stderr}`);

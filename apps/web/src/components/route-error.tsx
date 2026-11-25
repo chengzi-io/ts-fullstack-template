@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import { useCallback } from "react";
+
 import { queryClient } from "@/lib/query-client.ts";
 import { errorMessage, reportError, requestIdOf } from "@/lib/report-error.ts";
 
@@ -19,7 +20,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
         predicate: (query) => query.state.status === "error",
         type: "all",
       })
-      .catch((cause) => reportError(cause, { scope: "route-error" }));
+      .catch((error_) => reportError(error_, { scope: "route-error" }));
     reset();
   }, [reset]);
 

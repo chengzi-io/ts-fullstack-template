@@ -2,12 +2,11 @@ import { Button } from "@workspace/ui/components/button";
 import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import {
-  DataTable,
-  type DataTableProps,
-} from "@/components/blocks/data-table.tsx";
+import { DataTable } from "@/components/blocks/data-table.tsx";
+import type { DataTableProps } from "@/components/blocks/data-table.tsx";
 
-import { createPostColumns, type Post } from "./columns.tsx";
+import { createPostColumns } from "./columns.tsx";
+import type { Post } from "./columns.tsx";
 
 function getPostRowId(row: Post) {
   return String(row.id);

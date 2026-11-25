@@ -5,6 +5,8 @@ import { createShutdown } from "../src/lib/shutdown.js";
 const TIMEOUT_MS = 1000;
 const DRAIN_MS = 200;
 
+const noop = () => {};
+
 /** Drives shutdown by hand: no real timers, sockets, or process.exit. */
 function createHarness(
   options: {
@@ -14,29 +16,29 @@ function createHarness(
     exit?: (code: number) => void;
   } = {}
 ) {
-  let finishHttpClose: (error?: Error) => void = () => undefined;
+  let finishHttpClose: (error?: Error) => void = noop;
   const timers = new Map<number, () => void>();
 
   const server = {
-    close: vi.fn((callback: (error?: Error) => void) => {
+    close: vi.fn<(callback: (error?: Error) => void) => void>((callback) => {
       finishHttpClose = callback;
     }),
-    closeAllConnections: vi.fn(),
+    closeAllConnections: vi.fn<() => void>(),
   };
-  const closeDatabase = vi.fn(options.closeDatabase ?? (() => undefined));
+  const closeDatabase = vi.fn<() => void>(options.closeDatabase ?? noop);
   const closeTracing = options.closeTracing
-    ? vi.fn(options.closeTracing)
+    ? vi.fn<() => Promise<void>>(options.closeTracing)
     : undefined;
-  const exit = vi.fn((code: number) => options.exit?.(code));
-  const onDrainStart = vi.fn();
+  const exit = vi.fn<(code: number) => void>((code) => options.exit?.(code));
+  const onDrainStart = vi.fn<() => void>();
 
   const shutdown = createShutdown({
-    clearTimeout: () => undefined,
+    clearTimeout: () => {},
     closeDatabase,
     closeTracing,
     drainMs: options.drainMs ?? 0,
     exit,
-    log: { error: () => undefined, info: () => undefined },
+    log: { error: () => {}, info: () => {} },
     onDrainStart,
     server,
     setTimeout: (callback, milliseconds) => {
@@ -69,7 +71,7 @@ describe("shutdown", () => {
     await done;
 
     expect(h.closeDatabase).toHaveBeenCalledOnce();
-    expect(h.exit.mock.calls).toEqual([[0]]);
+    expect(h.exit.mock.calls).toStrictEqual([[0]]);
   });
 
   test("runs once no matter how many signals arrive", async () => {
@@ -82,7 +84,7 @@ describe("shutdown", () => {
 
     expect(second).toBe(first);
     expect(h.server.close).toHaveBeenCalledOnce();
-    expect(h.exit.mock.calls).toEqual([[0]]);
+    expect(h.exit.mock.calls).toStrictEqual([[0]]);
   });
 
   test("keeps the worst exit code requested while draining", async () => {
@@ -93,7 +95,7 @@ describe("shutdown", () => {
     h.finishHttpClose();
     await done;
 
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("force-closes connections and exits 1 after the timeout", async () => {
@@ -106,7 +108,7 @@ describe("shutdown", () => {
 
     expect(h.server.closeAllConnections).toHaveBeenCalledOnce();
     expect(h.closeDatabase).toHaveBeenCalledOnce();
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("exits 1 when the HTTP server fails to close", async () => {
@@ -117,7 +119,7 @@ describe("shutdown", () => {
     await done;
 
     expect(h.closeDatabase).toHaveBeenCalledOnce();
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("exits 1 when closing the database throws", async () => {
@@ -131,7 +133,7 @@ describe("shutdown", () => {
     h.finishHttpClose();
     await done;
 
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("closes tracing after the database and before exit", async () => {
@@ -149,7 +151,7 @@ describe("shutdown", () => {
     h.finishHttpClose();
     await done;
 
-    expect(order).toEqual(["database", "tracing", "exit:0"]);
+    expect(order).toStrictEqual(["database", "tracing", "exit:0"]);
   });
 
   test("exits 1 when closing tracing fails", async () => {
@@ -162,12 +164,12 @@ describe("shutdown", () => {
     await done;
 
     expect(h.closeTracing).toHaveBeenCalledOnce();
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("force-exits while tracing shutdown hangs", async () => {
     const h = createHarness({
-      closeTracing: () => new Promise<void>(() => undefined),
+      closeTracing: () => new Promise<void>(() => {}),
     });
 
     const done = h.shutdown({ reason: "SIGTERM" });
@@ -175,7 +177,7 @@ describe("shutdown", () => {
     h.fireTimer(TIMEOUT_MS);
     await done;
 
-    expect(h.exit.mock.calls).toEqual([[1]]);
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 
   test("reports not ready, drains, and only then closes HTTP", async () => {
@@ -190,6 +192,6 @@ describe("shutdown", () => {
 
     h.finishHttpClose();
     await done;
-    expect(h.exit.mock.calls).toEqual([[0]]);
+    expect(h.exit.mock.calls).toStrictEqual([[0]]);
   });
 });

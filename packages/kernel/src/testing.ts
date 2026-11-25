@@ -1,12 +1,21 @@
 import { createTestDb } from "@workspace/db/testing";
 
-import { createTRPCContext, type Logger } from "./context.js";
+import { createTRPCContext } from "./context.js";
+import type { Logger } from "./context.js";
 
 export const silentLogger: Logger = {
-  debug: () => undefined,
-  error: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
+  debug: () => {
+    /* noop */
+  },
+  error: () => {
+    /* noop */
+  },
+  info: () => {
+    /* noop */
+  },
+  warn: () => {
+    /* noop */
+  },
 };
 
 /**

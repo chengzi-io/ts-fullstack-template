@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe("env", () => {
   test("fails fast without DATABASE_URL", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockReturnValue(undefined);
 
     await expect(loadEnv({ DATABASE_URL: undefined })).rejects.toThrow(
       INVALID_ENV
@@ -29,7 +29,7 @@ describe("env", () => {
   });
 
   test("rejects database URLs the libSQL client cannot open", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockReturnValue(undefined);
 
     await expect(
       loadEnv({ DATABASE_URL: "postgres://localhost/app" })

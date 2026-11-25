@@ -1,5 +1,6 @@
 import { createClient, LibsqlError } from "@libsql/client";
-import { type AnyColumn, type SQL, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import type { AnyColumn, SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 export interface DatabaseConfig {

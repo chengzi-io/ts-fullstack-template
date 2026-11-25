@@ -1,9 +1,6 @@
 import { authorsTable } from "@workspace/authors/schema";
-import {
-  containsText,
-  type Executor,
-  isForeignKeyViolation,
-} from "@workspace/db";
+import { containsText, isForeignKeyViolation } from "@workspace/db";
+import type { Executor } from "@workspace/db";
 import { InvalidReferenceError, NotFoundError } from "@workspace/kernel/errors";
 import {
   paginationOffset,
@@ -41,6 +38,18 @@ interface PostRow {
 }
 
 const notFound = () => new NotFoundError("Post not found");
+
+function toPost(row: PostRow): Post {
+  return {
+    author: { id: row.authorId, name: row.authorName },
+    authorId: row.authorId,
+    body: row.body,
+    createdAt: row.createdAt,
+    id: row.id,
+    title: row.title,
+    updatedAt: row.updatedAt,
+  };
+}
 
 /** The FK on authorId is the existence check — no lookup-then-write race. */
 function rejectUnknownAuthor(error: unknown): never {
@@ -142,17 +151,5 @@ export function createPostsRepo(db: Executor) {
       }
       return byId(id);
     },
-  };
-}
-
-function toPost(row: PostRow): Post {
-  return {
-    author: { id: row.authorId, name: row.authorName },
-    authorId: row.authorId,
-    body: row.body,
-    createdAt: row.createdAt,
-    id: row.id,
-    title: row.title,
-    updatedAt: row.updatedAt,
   };
 }

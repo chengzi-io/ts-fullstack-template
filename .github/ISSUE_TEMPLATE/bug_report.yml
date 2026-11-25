@@ -1,6 +1,6 @@
 name: Bug report
 description: Something is broken or behaves differently than documented.
-labels: [ "bug" ]
+labels: ["bug"]
 body:
   - type: markdown
     attributes:

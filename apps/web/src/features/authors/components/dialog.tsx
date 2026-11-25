@@ -6,17 +6,18 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { useCallback, useEffect } from "react";
+
 import {
   useAuthorQuery,
   useCreateAuthorMutation,
   useUpdateAuthorMutation,
 } from "../hooks.ts";
 import {
-  type AuthorFormValues,
   authorFormDefaults,
   toCreateAuthorInput,
   toUpdateAuthorInput,
 } from "../model/form.ts";
+import type { AuthorFormValues } from "../model/form.ts";
 import { useAuthorActions, useAuthorDialog } from "../store.ts";
 import { AuthorForm } from "./form.tsx";
 

@@ -29,9 +29,9 @@ describe("authors", () => {
     const created = await caller.authors.create({ name: "  Ada  " });
 
     expect(created.name).toBe("Ada");
-    await expect(caller.authors.byId({ id: created.id })).resolves.toEqual(
-      created
-    );
+    await expect(
+      caller.authors.byId({ id: created.id })
+    ).resolves.toStrictEqual(created);
   });
 
   test("rejects a blank name", async () => {
@@ -47,7 +47,7 @@ describe("authors", () => {
 
     const page = await caller.authors.list({ page: 1, pageSize: 2 });
 
-    expect(page.items.map((author) => author.name)).toEqual([
+    expect(page.items.map((author) => author.name)).toStrictEqual([
       "third",
       "second",
     ]);
@@ -66,7 +66,9 @@ describe("authors", () => {
     const page = await caller.authors.list({ q: "ADA" });
 
     expect(page.total).toBe(1);
-    expect(page.items.map((author) => author.name)).toEqual(["Ada Lovelace"]);
+    expect(page.items.map((author) => author.name)).toStrictEqual([
+      "Ada Lovelace",
+    ]);
   });
 
   test("matches % and _ in the query literally", async () => {
@@ -75,7 +77,9 @@ describe("authors", () => {
 
     const page = await caller.authors.list({ q: "%" });
 
-    expect(page.items.map((author) => author.name)).toEqual(["100% pure"]);
+    expect(page.items.map((author) => author.name)).toStrictEqual([
+      "100% pure",
+    ]);
   });
 
   test("renames an author", async () => {
@@ -109,7 +113,9 @@ describe("authors", () => {
   test("deletes an author", async () => {
     const { id } = await caller.authors.create({ name: "Ada" });
 
-    await expect(caller.authors.delete({ id })).resolves.toEqual({ ok: true });
+    await expect(caller.authors.delete({ id })).resolves.toStrictEqual({
+      ok: true,
+    });
     await expect(caller.authors.byId({ id })).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -121,7 +127,7 @@ describe("authors", () => {
         await createAuthorsRepo(tx).create({ name: "Ada" });
         tx.rollback();
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow("Rollback");
 
     await expect(caller.authors.list()).resolves.toMatchObject({ total: 0 });
   });

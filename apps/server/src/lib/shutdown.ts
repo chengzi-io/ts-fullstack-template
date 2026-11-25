@@ -76,14 +76,11 @@ export function createShutdown(options: CreateShutdownOptions) {
     completion = new Promise<void>((resolve) => {
       let closing = false;
       let finished = false;
-      let timer: ShutdownTimer | undefined;
-      let drainTimer: ShutdownTimer | undefined;
+      const pendingTimers: ShutdownTimer[] = [];
 
       const clearTimers = (): void => {
-        for (const pending of [timer, drainTimer]) {
-          if (pending) {
-            clearShutdownTimeout(pending);
-          }
+        for (const pending of pendingTimers) {
+          clearShutdownTimeout(pending);
         }
       };
 
@@ -127,16 +124,15 @@ export function createShutdown(options: CreateShutdownOptions) {
           return;
         }
 
-        closeTracing().then(
-          () => complete(finalExitCode),
-          (error: unknown) => {
+        closeTracing()
+          .then(() => complete(finalExitCode))
+          .catch((error: unknown) => {
             log.error({ err: error }, "tracing close failed");
             complete(1);
-          }
-        );
+          });
       };
 
-      timer = setShutdownTimeout(() => {
+      const timer = setShutdownTimeout(() => {
         log.error({ timeoutMs }, "forced exit after shutdown timeout");
         try {
           server.closeAllConnections?.();
@@ -153,6 +149,7 @@ export function createShutdown(options: CreateShutdownOptions) {
         }
         complete(1);
       }, timeoutMs);
+      pendingTimers.push(timer);
       timer.unref?.();
 
       const closeServer = (): void => {
@@ -170,7 +167,7 @@ export function createShutdown(options: CreateShutdownOptions) {
       };
 
       if (drainMs > 0) {
-        drainTimer = setShutdownTimeout(closeServer, drainMs);
+        pendingTimers.push(setShutdownTimeout(closeServer, drainMs));
       } else {
         closeServer();
       }

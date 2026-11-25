@@ -1,150 +1,88 @@
 # Decisions
 
-Why the template is shaped this way. To change one, edit its entry and say
-what replaced it — don't leave the old reasoning standing.
+Why the template is shaped this way. To change one, edit its entry and say what replaced it — don't leave the old reasoning standing.
 
 ## 1. One module per business capability
 
-- **Decision:** `modules/<domain>` holds a capability's contract, schema,
-  repo, router, and tests; `apps/web/src/features/<domain>` holds its UI.
-  `packages/kernel`, `db`, `api`, and `ui` are shared plumbing.
-- **Why:** layer-first packages (domain / db / api) made every change cross
-  four packages, re-ran every package's tests, and pushed parallel work
-  through shared registry files. Now a change to one module re-runs only its
-  own and its dependents' tests, and adding one touches two shared source
-  files (`packages/api/src/index.ts`, the nav).
-- **Consequences:** rules the package graph cannot express are Biome rules in
-  `biome.jsonc` (browser-safe contracts, routers only through repos, no
-  cross-module routers, web imports). Export conditions were tried to make
-  `tsc` reject browser imports of `./router` — they break `AppRouter`
-  inference in the web, so the guard is lint, not module resolution.
-- **Rejected:** a contract package plus a server package per module (twice
-  the packages for the same guarantee).
+- **Decision:** `modules/<domain>` holds a capability's contract, schema, repo, router, and tests; `apps/web/src/features/<domain>` holds its UI. `packages/kernel`, `db`, `api`, and `ui` are shared plumbing.
+- **Why:** layer-first packages (domain / db / api) made every change cross four packages, re-ran every package's tests, and pushed parallel work through shared registry files. Now a change to one module re-runs only its own and its dependents' tests, and adding one touches two shared source files (`packages/api/src/index.ts`, the nav).
+- **Consequences:** rules the package graph cannot express are Oxlint rules in `oxlint.config.mts` (browser-safe contracts, routers only through repos, no cross-module routers, web imports). Export conditions were tried to make `tsc` reject browser imports of `./router` — they break `AppRouter` inference in the web, so the guard is lint, not module resolution.
+- **Rejected:** a contract package plus a server package per module (twice the packages for the same guarantee).
 
 ## 2. Constraints decide; repos throw domain errors
 
-- **Decision:** repos write and translate constraint failures into
-  `NotFoundError` / `ConflictError` / `InvalidReferenceError`; one kernel
-  middleware maps them to tRPC codes. Routers have no error handling.
-- **Why:** look-up-then-write raced (a concurrent write surfaced as a 500),
-  and three failure conventions (null, boolean, string union) were copied
-  inconsistently.
+- **Decision:** repos write and translate constraint failures into `NotFoundError` / `ConflictError` / `InvalidReferenceError`; one kernel middleware maps them to tRPC codes. Routers have no error handling.
+- **Why:** look-up-then-write raced (a concurrent write surfaced as a 500), and three failure conventions (null, boolean, string union) were copied inconsistently.
 
 ## 3. One contract path: tRPC
 
-No parallel REST endpoints for the same domain. Contract evolution rules are
-in the root `AGENTS.md` (additive changes; server deploys before web).
+No parallel REST endpoints for the same domain. Contract evolution rules are in the root `AGENTS.md` (additive changes; server deploys before web).
 
 ## 4. No auth in the template
 
-`protectedProcedure` is the seam; a product picks session / JWT / OAuth /
-RBAC — and then adds CSRF protection and credentialed CORS to match.
+`protectedProcedure` is the seam; a product picks session / JWT / OAuth / RBAC — and then adds CSRF protection and credentialed CORS to match.
 
 ## 5. No demo migrations
 
-The demo uses `pnpm db:push`. A product generates its first migration once
-its schema settles; deploys run `pnpm db:migrate` before starting the new
-server (never on boot — replicas would race). Backups, restore, and
-migration rollback belong to the product.
+The demo uses `pnpm db:push`. A product generates its first migration once its schema settles; deploys run `pnpm db:migrate` before starting the new server (never on boot — replicas would race). Backups, restore, and migration rollback belong to the product.
 
 ## 6. Testing Trophy, and the demo ships with its tests
 
-Integration tests first (module routers via `createTestContext()`, the host
-via `app.request()`, web pages via `renderApp()` + MSW), unit tests for pure
-logic, E2E only for critical flows. Demo tests were once left out; that was
-reversed because AI-written code copies the nearest example — tests
-included. They are deleted together with the demo.
+Integration tests first (module routers via `createTestContext()`, the host via `app.request()`, web pages via `renderApp()` + MSW), unit tests for pure logic, E2E only for critical flows. Demo tests were once left out; that was reversed because AI-written code copies the nearest example — tests included. They are deleted together with the demo.
 
 ## 7. Every mutation refreshes every query
 
-Any successful mutation invalidates all queries (active ones refetch). No
-feature knows another feature's cache keys. Cost: a few extra refetches.
+Any successful mutation invalidates all queries (active ones refetch). No feature knows another feature's cache keys. Cost: a few extra refetches.
 
 ## 8. Lists page on the server; their state lives in the URL
 
-`page` / `pageSize` / `total` offset paging plus a server-side `q` search,
-with `page` / `pageSize` / `q` in route search params. Right for admin
-tables; deep feeds should switch to cursor paging. Tables never sort or
-filter a single page in the browser.
+`page` / `pageSize` / `total` offset paging plus a server-side `q` search, with `page` / `pageSize` / `q` in route search params. Right for admin tables; deep feeds should switch to cursor paging. Tables never sort or filter a single page in the browser.
 
 ## 9. Probes: `/healthz` and `/readyz`
 
-Liveness is process-only. Readiness answers 503 while shutdown drains or
-when the database is unreachable (the cause is logged). No `/health` alias.
+Liveness is process-only. Readiness answers 503 while shutdown drains or when the database is unreachable (the cause is logged). No `/health` alias.
 
 ## 10. A file database only for a declared single instance
 
-Production refuses a `file:` `DATABASE_URL` unless
-`DATABASE_SINGLE_INSTANCE=true`: two replicas would each write their own copy.
+Production refuses a `file:` `DATABASE_URL` unless `DATABASE_SINGLE_INSTANCE=true`: two replicas would each write their own copy.
 
 ## 11. Integer ids (acknowledged)
 
-The demo uses autoincrement integers. They are enumerable and collide when
-databases merge; a public-facing or multi-region product should use UUIDv7.
+The demo uses autoincrement integers. They are enumerable and collide when databases merge; a public-facing or multi-region product should use UUIDv7.
 
 ## 12. Tracing is opt-in OTLP; the request id stays the cross-tier key
 
-- **Decision:** the server traces only when `OTEL_EXPORTER_OTLP_ENDPOINT` is
-  set: `@hono/otel` middleware for one span per request, a pino `mixin` for
-  `trace_id` / `span_id` on every log line, spans flushed during shutdown.
-  The web sends no trace context; support correlates by request id.
-- **Why:** vendor-neutral and free when unused. OTel's auto-instrumentation
-  patches modules through a loader hook and silently does nothing in the
-  server's ESM bundle.
+- **Decision:** the server traces only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set: `@hono/otel` middleware for one span per request, a pino `mixin` for `trace_id` / `span_id` on every log line, spans flushed during shutdown. The web sends no trace context; support correlates by request id.
+- **Why:** vendor-neutral and free when unused. OTel's auto-instrumentation patches modules through a loader hook and silently does nothing in the server's ESM bundle.
 - **Not yet:** per-procedure spans, metrics.
 
 ## 13. Unexpected web errors go through one seam
 
-Failed queries and mutations and route crashes all reach `reportError`
-(`apps/web/src/lib/report-error.ts`), once per error, with the request id.
-An error tracker plugs in there; features keep showing expected errors inline.
-The API marks a kernel domain error (`NotFoundError`, `ConflictError`,
-`InvalidReferenceError`) `data.expected`, and the query cache skips those;
-input that fails validation is not marked, since the web sending it is a bug.
+Failed queries and mutations and route crashes all reach `reportError` (`apps/web/src/lib/report-error.ts`), once per error, with the request id. An error tracker plugs in there; features keep showing expected errors inline. The API marks a kernel domain error (`NotFoundError`, `ConflictError`, `InvalidReferenceError`) `data.expected`, and the query cache skips those; input that fails validation is not marked, since the web sending it is a bug.
 
 ## 14. One E2E test, of the critical flow
 
-Playwright runs the built server on a fresh temp database and the built web
-(`vite preview`): create an author, post for it, see the post. axe checks
-WCAG 2.1 A/AA at each step in the real browser, where contrast and rendered
-names can be measured (jsdom computes no styles). It is a CI job and
-`pnpm e2e`, never a cached Turbo task. Everything else stays in the faster
-integration tests.
+Playwright runs the built server on a fresh temp database and the built web (`vite preview`): create an author, post for it, see the post. axe checks WCAG 2.1 A/AA at each step in the real browser, where contrast and rendered names can be measured (jsdom computes no styles). It is a CI job and `pnpm e2e`, never a cached Turbo task. Everything else stays in the faster integration tests.
 
 ## 15. Dependency audit blocks only what a PR introduces
 
-Dependency review fails a PR only on advisories it adds. The backlog —
-advisories published later for what the lockfile already holds — goes to
-Dependabot alerts and security updates. A PR gate on the whole tree would
-turn every open PR red the day an advisory is published, whatever the PR
-changed. A scheduled `pnpm audit` would repeat the alerts with less reach:
-its failures sit on the Actions page and open no fix.
+Dependency review fails a PR only on advisories it adds. The backlog — advisories published later for what the lockfile already holds — goes to Dependabot alerts and security updates. A PR gate on the whole tree would turn every open PR red the day an advisory is published, whatever the PR changed. A scheduled `pnpm audit` would repeat the alerts with less reach: its failures sit on the Actions page and open no fix.
 
 ## 16. Releases come from Conventional Commits
 
-PR titles are checked and become the squash commit; release-please turns
-them into a Release PR with the changelog and the next version. Derived
-projects compare their base against the tags: `scripts/init-project.mjs`
-resets a new project to 0.0.0 and has its first commit name the template's
-last release. "Use this template" copies `main`, which may be ahead of that
-tag, so `main` must stay usable between releases.
+PR titles are checked and become the squash commit; release-please turns them into a Release PR with the changelog and the next version. Derived projects compare their base against the tags: `scripts/init-project.mjs` resets a new project to 0.0.0 and has its first commit name the template's last release. "Use this template" copies `main`, which may be ahead of that tag, so `main` must stay usable between releases.
 
 ## 17. Drizzle stays on its stable release line
 
-- **Decision:** `drizzle-orm` and `drizzle-kit` are pinned to the npm
-  `latest` release (0.45.x / 0.31.x), not the 1.0 release candidates.
-- **Why:** a template is copied into products, so it should not hand them a
-  pre-release. The 1.0 RC was in use since the first db commit with no
-  recorded reason, and nothing here needs it: the schema, queries,
-  `drizzle({ client })`, `dialect: "turso"`, and kit `push` / `generate` /
-  `migrate` / `check` / `export` all exist on stable.
-- **Consequences:** `createTestDb()` runs the SQL script from
-  `drizzle-kit export --sql` (the RC's `--output json` is not on stable).
-  `drizzle.config.ts` has no `strict: true`: on stable it confirms every
-  push, which fails without a TTY (`pnpm e2e`, CI); pushes that lose data
-  still ask. Migrations use stable's `drizzle/meta/_journal.json` layout.
-  Moving to 1.0 once it is stable is a deliberate upgrade (relational
-  queries v2, migration folder format), not a version bump.
+- **Decision:** `drizzle-orm` and `drizzle-kit` are pinned to the npm `latest` release (0.45.x / 0.31.x), not the 1.0 release candidates.
+- **Why:** a template is copied into products, so it should not hand them a pre-release. The 1.0 RC was in use since the first db commit with no recorded reason, and nothing here needs it: the schema, queries, `drizzle({ client })`, `dialect: "turso"`, and kit `push` / `generate` / `migrate` / `check` / `export` all exist on stable.
+- **Consequences:** `createTestDb()` runs the SQL script from `drizzle-kit export --sql` (the RC's `--output json` is not on stable). `drizzle.config.ts` has no `strict: true`: on stable it confirms every push, which fails without a TTY (`pnpm e2e`, CI); pushes that lose data still ask. Migrations use stable's `drizzle/meta/_journal.json` layout. Moving to 1.0 once it is stable is a deliberate upgrade (relational queries v2, migration folder format), not a version bump.
+
+## 18. Oxlint + Oxfmt (with `@shadcn/lint`) over Biome
+
+- **Decision:** Ultracite drives `oxlint` + `oxfmt` (`oxlint.config.mts` / `oxfmt.config.mts`) with `@shadcn/lint` enabled, replacing Biome as the single lint/format toolchain.
+- **Why:** `@shadcn/lint` reads the Tailwind v4 theme and `@workspace/ui` primitives to reject raw colors, non-layout arbitrary values, and primitive restyling (`no-restyle`) with actionable token/variant suggestions for AI edits. Biome has no JS-plugin equivalent, and keeping two linters side-by-side duplicates tooling and maintenance.
+- **Consequences:** `oxfmt` is still pre-1.0 (`0.80.x`), so it is pinned to an exact version and grouped with `oxlint`, `@shadcn/lint`, and `ultracite` in Dependabot (unlike Drizzle in #17, a dev-time formatter carries no runtime or migration format risk). A few Biome-only sorting rules (JSX props, interface members, object keys) are gone, while `oxfmt` adds import, `package.json`, and Tailwind class sorting.
 
 ## Not decided yet — add when a product needs it
 
@@ -157,6 +95,4 @@ tag, so `main` must stay usable between releases.
 
 ## Out of scope for the template
 
-Auth implementations; audit log, event bus, job queue; cloud, orchestration,
-or reverse-proxy specifics (`apps/server/Dockerfile` is a platform-neutral
-image, nothing more); rate-limit numbers without real traffic targets.
+Auth implementations; audit log, event bus, job queue; cloud, orchestration, or reverse-proxy specifics (`apps/server/Dockerfile` is a platform-neutral image, nothing more); rate-limit numbers without real traffic targets.
