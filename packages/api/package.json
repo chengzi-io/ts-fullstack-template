@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trpc/server": "^11.22.1",
+    "@trpc/server": "^11.31.2",
     "@workspace/authors": "workspace:*",
     "@workspace/kernel": "workspace:*",
     "@workspace/posts": "workspace:*"
