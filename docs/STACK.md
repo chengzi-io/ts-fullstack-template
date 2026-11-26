@@ -64,14 +64,14 @@ What the template ships with, and where each piece lives. Only what is installed
 
 ## Repository
 
-| Tool            | Role                                             |
-| --------------- | ------------------------------------------------ |
-| pnpm workspaces | `apps/*`, `modules/*`, `packages/*`              |
-| Turborepo       | `dev`, `build`, `typecheck`, `test` with caching |
-| lefthook        | Pre-commit fix, commit-msg lint                  |
-| commitlint      | Conventional Commits                             |
-| release-please  | Release PRs, tags, `CHANGELOG.md`                |
-| Dependabot      | Dependency and GitHub Actions updates            |
+| Tool            | Role                                                    |
+| --------------- | ------------------------------------------------------- |
+| pnpm workspaces | `apps/*`, `modules/*`, `packages/*`                     |
+| Turborepo       | `dev`, `build`, `typecheck`, `test` with caching        |
+| lefthook        | Pre-commit fix, commit-msg lint                         |
+| commitlint      | Conventional Commits                                    |
+| git-cliff       | GitHub Release notes and version bumping (`cliff.toml`) |
+| Dependabot      | Dependency and GitHub Actions updates                   |
 
 ## Development only — `apps/web/src/components/dev-tools.tsx`
 

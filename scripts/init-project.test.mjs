@@ -1,14 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -16,8 +7,6 @@ import { afterEach, expect, test } from "vitest";
 
 const root = path.resolve(import.meta.dirname, "..");
 const templateRepo = "chengzi-io/ts-fullstack-template";
-// "version" in package.json, "." in the release-please manifest.
-const versionField = /(?<key>"(?:version|\.)": )"[^"]+"/u;
 const temps = [];
 
 const git = (cwd, ...args) =>
@@ -28,7 +17,7 @@ const git = (cwd, ...args) =>
   );
 
 // A fresh "Use this template" copy of the working tree, with `origin` set.
-function createProject(origin, { released = false } = {}) {
+function createProject(origin) {
   const dir = mkdtempSync(path.join(tmpdir(), "init-project-"));
   temps.push(dir);
   const files = git(
@@ -43,19 +32,6 @@ function createProject(origin, { released = false } = {}) {
   for (const file of files) {
     cpSync(path.join(root, file), path.join(dir, file));
   }
-  if (released) {
-    for (const file of ["package.json", ".release-please-manifest.json"]) {
-      const text = readFileSync(path.join(dir, file), "utf-8");
-      writeFileSync(
-        path.join(dir, file),
-        text.replace(versionField, '$<key>"0.1.0"')
-      );
-    }
-    writeFileSync(
-      path.join(dir, "CHANGELOG.md"),
-      `# Changelog\n\n## [0.1.0](https://github.com/${templateRepo}/compare/v0.0.0...v0.1.0)\n`
-    );
-  }
   git(dir, "init", "--quiet");
   git(dir, "add", "--all");
   git(dir, "commit", "--quiet", "--message", "Initial commit");
@@ -63,20 +39,11 @@ function createProject(origin, { released = false } = {}) {
   return dir;
 }
 
-// The script asks `gh` for the login that owns CODEOWNERS.
-function initProject(dir) {
-  const bin = path.join(dir, ".test-bin");
-  mkdirSync(bin);
-  writeFileSync(path.join(bin, "gh"), "#!/bin/sh\necho octocat\n");
-  chmodSync(path.join(bin, "gh"), 0o755);
-  const result = spawnSync("node", ["scripts/init-project.mjs"], {
+const initProject = (dir) =>
+  spawnSync("node", ["scripts/init-project.mjs"], {
     cwd: dir,
     encoding: "utf-8",
-    env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` },
   });
-  rmSync(bin, { recursive: true });
-  return result;
-}
 
 const read = (dir, file) => readFileSync(path.join(dir, file), "utf-8");
 
@@ -86,11 +53,8 @@ afterEach(() => {
   }
 });
 
-test.each([
-  ["an unreleased template", false],
-  ["a released template", true],
-])("makes %s the new repository's own project", (_, released) => {
-  const dir = createProject("git@github.com:acme/my-app.git", { released });
+test("makes the copy the new repository's own project", () => {
+  const dir = createProject("git@github.com:acme/my-app.git");
 
   const result = initProject(dir);
 
@@ -98,14 +62,9 @@ test.each([
   expect(result.status).toBe(0);
   const pkg = JSON.parse(read(dir, "package.json"));
   expect([pkg.name, pkg.version]).toStrictEqual(["my-app", "0.0.0"]);
-  expect(JSON.parse(read(dir, ".release-please-manifest.json"))).toStrictEqual({
-    ".": "0.0.0",
-  });
-  expect(existsSync(path.join(dir, "CHANGELOG.md"))).toBe(false);
   expect(read(dir, "LICENSE")).toContain(
     `Copyright (c) ${new Date().getFullYear()} acme`
   );
-  expect(read(dir, ".github/CODEOWNERS")).toBe("* @octocat\n");
   expect(read(dir, "README.md")).toContain("https://github.com/acme/my-app");
   expect(existsSync(path.join(dir, "scripts/init-project.mjs"))).toBe(false);
   expect(existsSync(path.join(dir, "scripts/init-project.test.mjs"))).toBe(

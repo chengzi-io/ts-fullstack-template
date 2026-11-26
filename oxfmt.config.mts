@@ -11,8 +11,7 @@ export default defineConfig({
     "packages/ui/src/hooks/**",
     "**/src/components/ui/**",
     "**/components/theme-provider.tsx",
-    // drizzle journal metadata & release-please changelog
+    // drizzle journal metadata
     "**/drizzle/meta/**",
-    "CHANGELOG.md",
   ],
 });

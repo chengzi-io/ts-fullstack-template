@@ -5,11 +5,9 @@
 //   node scripts/init-project.mjs [owner/repo]
 //
 // owner/repo defaults to the `origin` remote. Names the package after the
-// repository, resets the release state (version 0.0.0, no CHANGELOG.md),
-// points LICENSE, CODEOWNERS, README.md and the .github templates at the new
+// repository, points LICENSE, README.md and the .github templates at the new
 // repository, drops the README parts that only describe the template, then
-// deletes itself and its test. Review the diff and commit it. Needs `gh` logged in:
-// CODEOWNERS gets your GitHub login.
+// deletes itself and its test. Review the diff and commit it.
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 
@@ -28,8 +26,7 @@ const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf-8" }).trim();
 
 // Every pattern must match: one that no longer does means the template
-// changed under this script. A match may still change nothing — an
-// unreleased template is already at 0.0.0.
+// changed under this script.
 function edit(file, ...replacements) {
   let text = readFileSync(file, "utf-8");
   for (const [pattern, replacement] of replacements) {
@@ -64,26 +61,15 @@ if (repo === templateRepo) {
     `${repo} is the template itself; run this in a repository created from it.`
   );
 }
-const login = run("gh", ["api", "user", "--jq", ".login"]);
-const { version: templateVersion } = JSON.parse(
-  readFileSync("package.json", "utf-8")
-);
 
-edit(
-  "package.json",
-  [`"name": "${templateName}"`, `"name": "${name.toLowerCase()}"`],
-  [`"version": "${templateVersion}"`, '"version": "0.0.0"']
-);
-// 0.0.0 tells release-please nothing was released yet; the template's own
-// changelog is not this project's history.
-writeFileSync(".release-please-manifest.json", '{\n  ".": "0.0.0"\n}\n');
-rmSync("CHANGELOG.md", { force: true });
-
+edit("package.json", [
+  `"name": "${templateName}"`,
+  `"name": "${name.toLowerCase()}"`,
+]);
 edit("LICENSE", [
   copyrightLine,
   `Copyright (c) ${new Date().getFullYear()} ${owner}`,
 ]);
-writeFileSync(".github/CODEOWNERS", `* @${login}\n`);
 edit(
   "README.md",
   [templateOnly, ""],
@@ -117,14 +103,13 @@ for (const file of ownFiles) {
   rmSync(file);
 }
 
-console.log(`${repo} is set up from ${templateRepo} v${templateVersion}.
+console.log(`${repo} is set up from ${templateRepo}.
 
 Next:
   1. Review the changes, then commit and push them:
        git add -A
-       git commit -m "chore: start from ${templateName} v${templateVersion}"
+       git commit -m "chore: start from ${templateName}"
   2. Set up GitHub once, as a repository admin (CONTRIBUTING.md, "Maintainer setup"):
-       node scripts/github/create-release-app.mjs
        scripts/github/setup-repo.sh
   3. LICENSE is MIT, held by ${owner}; replace it if you need another license.
   4. When the demo has served its purpose: docs/REMOVE-DEMO.md`);

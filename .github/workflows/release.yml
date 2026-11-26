@@ -2,32 +2,146 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.3.0). Leave empty to auto-bump from Conventional Commits."
+        required: false
+        type: string
+      draft:
+        description: "Create as a draft release"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release-please:
-    # A repository made from the template has no release App until
-    # scripts/github/create-release-app.mjs runs, yet its first commit already
-    # pushes to main. Skip until the App exists instead of failing.
-    if: vars.RELEASE_APP_CLIENT_ID != ''
+  release:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      # The Release PR must trigger CI, which a GITHUB_TOKEN-authored PR does
-      # not; a GitHub App token does. Nothing is published, so no publish job.
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: app-token
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-issues: write
-          permission-pull-requests: write
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare release inputs
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_DRAFT: ${{ inputs.draft }}
+        run: |
+          set -euo pipefail
+          tag_re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            tag="$GITHUB_REF_NAME"
+            # Publishing a draft created via workflow_dispatch pushes the tag
+            # and re-triggers this workflow; treat an existing release as done.
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "Release $tag already exists; skipping."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+            echo "cliff_args=--current --strip all" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ -n "$INPUT_TAG" ]]; then
+            if [[ ! "$INPUT_TAG" =~ $tag_re ]]; then
+              echo "::error::Tag '$INPUT_TAG' must match vX.Y.Z (optional -prerelease)."
+              exit 1
+            fi
+            if git rev-parse -q --verify "refs/tags/$INPUT_TAG" >/dev/null; then
+              echo "::error::Tag $INPUT_TAG already exists."
+              exit 1
+            fi
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+            echo "cliff_args=--unreleased --tag $INPUT_TAG --strip all" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "cliff_args=--unreleased --bump --strip all" >> "$GITHUB_OUTPUT"
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "draft=${INPUT_DRAFT:-true}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        if: steps.prepare.outputs.skip != 'true'
+        id: cliff
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
         with:
-          token: ${{ steps.app-token.outputs.token }}
-          config-file: .github/release-please-config.json
-          manifest-file: .release-please-manifest.json
+          config: cliff.toml
+          args: ${{ steps.prepare.outputs.cliff_args }}
+        env:
+          OUTPUT: ${{ runner.temp }}/release-notes.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create or update GitHub Release
+        if: steps.prepare.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARED_TAG: ${{ steps.prepare.outputs.tag }}
+          CLIFF_VERSION: ${{ steps.cliff.outputs.version }}
+          NOTES_FILE: ${{ steps.cliff.outputs.changelog }}
+          DRAFT: ${{ steps.prepare.outputs.draft }}
+        run: |
+          set -euo pipefail
+          tag="${PREPARED_TAG:-$CLIFF_VERSION}"
+          if [[ -z "$tag" || "$tag" == "null" ]]; then
+            echo "::error::Could not determine release tag. Pass an explicit tag input."
+            exit 1
+          fi
+
+          # For workflow_dispatch, git-cliff --bump returns the existing latest
+          # tag unchanged when there are no releasable commits since that tag.
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] &&
+             git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Nothing to bump since $tag. Pass an explicit tag to override."
+            exit 1
+          fi
+
+          prerelease=false
+          [[ "$tag" == *-* ]] && prerelease=true
+
+          # Re-running workflow_dispatch (or pushing a tag) while a draft for the
+          # same tag already exists refreshes the draft instead of duplicating it.
+          draft_id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+            jq -r --arg tag "$tag" '[.[] | select(.draft == true and .tag_name == $tag) | .id][0] // ""')
+
+          if [[ -n "$draft_id" ]]; then
+            payload=$(jq -n \
+              --arg name "$tag" \
+              --rawfile body "$NOTES_FILE" \
+              --arg target "$GITHUB_SHA" \
+              --argjson draft "$DRAFT" \
+              --argjson prerelease "$prerelease" \
+              '{name: $name, body: $body, target_commitish: $target, draft: $draft, prerelease: $prerelease}')
+            gh api --silent --method PATCH "repos/$GITHUB_REPOSITORY/releases/$draft_id" --input - <<< "$payload"
+            echo "Updated draft release $tag (draft=$DRAFT)."
+            exit 0
+          fi
+
+          args=("$tag" --title "$tag" --notes-file "$NOTES_FILE")
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            args+=(--target "$GITHUB_SHA")
+          fi
+          if [[ "$DRAFT" == "true" ]]; then
+            args+=(--draft)
+          fi
+          if [[ "$prerelease" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh release create "${args[@]}"
