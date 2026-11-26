@@ -10,7 +10,7 @@
   "scripts": {
     "db:check": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs check",
     "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:migrate": "node --env-file-if-exists=.env ./scripts/migrate.mjs",
     "db:pull": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs pull",
     "db:push": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs push",
     "db:studio": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs studio",
