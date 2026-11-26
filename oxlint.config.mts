@@ -21,6 +21,8 @@ const WEB_SERVER_ONLY_PATTERN = {
     "@workspace/api/**",
     "@workspace/*/router",
     "@workspace/*/schema",
+    "@workspace/*/repo",
+    "@workspace/kernel",
     "@workspace/kernel/context",
     "@workspace/kernel/errors",
     "@workspace/kernel/testing",
@@ -29,6 +31,19 @@ const WEB_SERVER_ONLY_PATTERN = {
   message:
     "Server-only — apps/web uses module contracts (@workspace/<module>/contract) and reaches the server through tRPC.",
 };
+
+const WEB_FEATURE_CROSS_PATTERN = {
+  group: [
+    "@/features/*/components/**",
+    "@/features/*/hooks.ts",
+    "@/features/*/model/**",
+  ],
+  message:
+    "Reach another feature only through its api.ts (query options) or store.ts (actions).",
+};
+
+const WEB_FEATURE_ESCAPE_MESSAGE =
+  "Cross-feature and shared imports must use @/ paths rather than escaping the feature folder with relative imports.";
 
 const MODULE_RESTRICTED_PATTERNS = [
   {
@@ -115,7 +130,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/web/src/features/**"],
+      files: ["apps/web/src/components/blocks/**"],
       rules: {
         "no-restricted-imports": [
           "error",
@@ -125,12 +140,81 @@ export default defineConfig({
               WEB_SERVER_ONLY_PATTERN,
               {
                 group: [
-                  "@/features/*/components/**",
-                  "@/features/*/hooks.ts",
-                  "@/features/*/model/**",
+                  "@/features/**",
+                  "@/routes/**",
+                  "@/components/layout/**",
                 ],
                 message:
-                  "Reach another feature only through its api.ts (query options) or store.ts (actions).",
+                  "Blocks are domain-free reusable UI and may only depend downward on @workspace/ui, hooks, and lib.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/web/src/components/layout/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: WEB_RESTRICTED_PATHS,
+            patterns: [
+              WEB_SERVER_ONLY_PATTERN,
+              {
+                group: ["@/routes/**"],
+                message:
+                  "Layout shells sit below routes and may not import from routes/.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/web/src/features/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: WEB_RESTRICTED_PATHS,
+            patterns: [WEB_SERVER_ONLY_PATTERN, WEB_FEATURE_CROSS_PATTERN],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/web/src/features/*/*.{ts,tsx}"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: WEB_RESTRICTED_PATHS,
+            patterns: [
+              WEB_SERVER_ONLY_PATTERN,
+              WEB_FEATURE_CROSS_PATTERN,
+              {
+                group: ["../*", "../**"],
+                message: WEB_FEATURE_ESCAPE_MESSAGE,
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ["apps/web/src/features/*/*/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: WEB_RESTRICTED_PATHS,
+            patterns: [
+              WEB_SERVER_ONLY_PATTERN,
+              WEB_FEATURE_CROSS_PATTERN,
+              {
+                group: ["../../*", "../../**"],
+                message: WEB_FEATURE_ESCAPE_MESSAGE,
               },
             ],
           },
@@ -180,18 +264,23 @@ export default defineConfig({
               ...MODULE_RESTRICTED_PATTERNS,
               {
                 group: [
+                  "node:*",
                   "drizzle-orm",
                   "drizzle-orm/**",
                   "@trpc/server",
                   "@workspace/db",
                   "@workspace/db/**",
                   "@workspace/*/schema",
+                  "@workspace/*/repo",
                   "@workspace/kernel/context",
                   "@workspace/kernel/errors",
                   "@workspace/kernel/testing",
                   "@workspace/kernel/trpc",
+                  "./schema",
                   "./schema.js",
+                  "./repo",
                   "./repo.js",
+                  "./router",
                   "./router.js",
                 ],
                 message:
@@ -211,7 +300,16 @@ export default defineConfig({
             patterns: [
               ...MODULE_RESTRICTED_PATTERNS,
               {
-                group: ["drizzle-orm", "drizzle-orm/**", "./schema.js"],
+                group: [
+                  "drizzle-orm",
+                  "drizzle-orm/**",
+                  "@workspace/db",
+                  "@workspace/db/**",
+                  "@workspace/*/schema",
+                  "@workspace/*/repo",
+                  "./schema",
+                  "./schema.js",
+                ],
                 message: "Routers reach data only through their module's repo.",
               },
             ],
