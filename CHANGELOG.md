@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/chengzi-io/ts-fullstack-template/compare/v0.2.0...v0.2.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **github:** remove duplicate security contact link ([#68](https://github.com/chengzi-io/ts-fullstack-template/issues/68)) ([78075b6](https://github.com/chengzi-io/ts-fullstack-template/commit/78075b6506a9697f642e24159821303720510321))
+
 ## [0.2.0](https://github.com/chengzi-io/ts-fullstack-template/compare/v0.1.0...v0.2.0) (2026-10-31)
 
 
