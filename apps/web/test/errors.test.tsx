@@ -1,7 +1,8 @@
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
+import { RouteError } from "@/components/route-error.tsx";
 import { queryClient } from "@/lib/query-client.ts";
 
 import { renderApp } from "./app.tsx";
@@ -87,5 +88,43 @@ test("shows the route error with its request id and recovers on Try again", asyn
       queries: { retry: false, throwOnError: false },
     });
     reported.mockRestore();
+  }
+});
+
+test("renders NotFound with a link home when navigating to an unknown route", async () => {
+  renderApp("/does-not-exist");
+
+  await expect(
+    screen.findByRole("heading", { name: "Page not found" })
+  ).resolves.toBeTruthy();
+  const homeLink = screen.getByRole("link", { name: "Back to home" });
+  expect(homeLink.getAttribute("href")).toBe("/");
+});
+
+test("awaits queryClient.resetQueries before invoking reset on Try again", async () => {
+  const user = userEvent.setup();
+  let resolveReset!: () => void;
+  const resetQueriesSpy = vi
+    .spyOn(queryClient, "resetQueries")
+    .mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveReset = resolve;
+        })
+    );
+  const reset = vi.fn<() => void>();
+
+  try {
+    render(<RouteError error={new Error("boom")} reset={reset} />);
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(resetQueriesSpy).toHaveBeenCalledOnce();
+    expect(reset).not.toHaveBeenCalled();
+
+    resolveReset();
+    await waitFor(() => expect(reset).toHaveBeenCalledOnce());
+  } finally {
+    resetQueriesSpy.mockRestore();
   }
 });
