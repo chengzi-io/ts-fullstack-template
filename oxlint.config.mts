@@ -140,6 +140,9 @@ export default defineConfig({
     {
       files: ["apps/web/src/routes/**"],
       rules: {
+        // TanStack Router declares `export const Route = createFileRoute(...)({ component: Page })`
+        // above `function Page()`, which references `Route.useSearch()` / `Route.useNavigate()`.
+        "no-use-before-define": ["error", { functions: false }],
         "no-restricted-imports": [
           "error",
           {
