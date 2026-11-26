@@ -4,9 +4,10 @@
 
 Before editing files for a substantial task:
 
-- Run `pnpm dlx @tanstack/intent@latest list` from the workspace root to see available local skills.
-- If a listed skill matches the task, run `pnpm dlx @tanstack/intent@latest load <package>#<skill>` before changing files.
+- Run `pnpm exec intent list` from the workspace root to see available local skills.
+- If a listed skill matches the task, run `pnpm exec intent load <package>#<skill>` before changing files.
 - Use the loaded `SKILL.md` guidance while making the change.
+- If `intent` is unavailable or no skill matches, proceed with the relevant package `AGENTS.md` and the source files.
 - Monorepos: when working across packages, run the skill check from the workspace root and prefer the local skill for the package being changed.
 - Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
 
@@ -67,6 +68,8 @@ flowchart LR
 
 **Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree. Commits pass `commitlint` (`.commitlintrc.yaml`, `commit-msg` hook) and PR titles pass the same Conventional Commit rules (`.github/workflows/pr-title.yml`) because the title becomes the squash commit  
 **DB (demo / local iterate):** `pnpm db:push` — real migrations after product schema stabilizes
+
+**Worktrees:** in a secondary git worktree never run `lefthook install` — hooks live in the shared `.git/hooks`, so it overwrites the primary checkout's hooks
 
 # Contract changes
 
