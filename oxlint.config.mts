@@ -234,9 +234,9 @@ export default defineConfig({
             patterns: [
               WEB_SERVER_ONLY_PATTERN,
               {
-                group: ["@/features/*/api.ts", "@/features/*/model/**"],
+                group: ["@/features/*/model/**"],
                 message:
-                  "Routes use a feature's components, hooks.ts and store.ts — not its api.ts or model/.",
+                  "Routes use a feature's components, hooks.ts, store.ts (and api.ts only inside an opt-in route loader) — never its model/.",
               },
             ],
           },
