@@ -14,6 +14,14 @@ modules/<name>/
   test/router.test.ts  router tests via createTestContext()
 ```
 
+## Adding a new module
+
+1. Set `"name": "@workspace/<domain>"` in its `package.json`, add it as a workspace dependency in `packages/api` (and `apps/web` when it has UI), register the router in `packages/api/src/index.ts`, then `pnpm install` — pnpm will not resolve an unlisted module.
+2. Relative imports carry `.js` (`moduleResolution: "NodeNext"`): `./contract.js`, `./schema.js`, `./repo.js`.
+3. Tables stay in `src/schema.ts` — `drizzle.config.ts` and `createTestDb()` glob that path, so nothing needs registering.
+4. SQLite does not index foreign keys: add an explicit `index("<table>_<column>_idx").on(table.column)` for every `.references(…)` column, or the restrict check scans the table.
+5. List inputs need `.prefault({})` (Zod v4) so a zero-arg call passes, and update inputs need an empty-patch `.refine()` so `{}` is rejected instead of silently no-op'ing.
+
 ## Rules
 
 - Field lists live once in `contract.ts`; inputs derive with `pick` / `partial` / `extend`
@@ -48,4 +56,44 @@ Assert the codes and shapes a client sees. Mount the routers of modules you depe
 ```bash
 pnpm --filter @workspace/<name> test
 pnpm --filter @workspace/<name> typecheck
+```
+
+## Minimal module skeleton (post-demo reference)
+
+After `docs/REMOVE-DEMO.md` deletes `authors` and `posts`, this is the canonical shape:
+
+```ts
+// contract.ts — Zod shapes + z.output types only; browser-safe
+export const thingSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string(),
+  createdAt: z.date(),
+});
+export const createThingInput = thingSchema.pick({ title: true });
+export const listThingsInput = paginationInput.prefault({});
+export type Thing = z.output<typeof thingSchema>;
+
+// schema.ts — Drizzle table, FK indexed explicitly
+export const thingsTable = sqliteTable(
+  "things",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    title: text().notNull(),
+    createdAt: int({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index("things_title_idx").on(table.title)]
+);
+
+// repo.ts — the only code touching the table; throws kernel errors
+export function createThingsRepo(db: Executor) {
+  return { byId, create, list };
+}
+
+// router.ts — procedures read the repo off ctx; no error handling
+const thingsProcedure = publicProcedure.use(({ ctx, next }) =>
+  next({ ctx: { things: createThingsRepo(ctx.db) } })
+);
+export const thingsRouter = {
+  list: thingsProcedure.input(listThingsInput).output(listThingsOutput).query(…),
+} satisfies TRPCRouterRecord;
 ```

@@ -7,9 +7,11 @@ Vite SPA. **Feature-first**, thin routes. Server state = tRPC + TanStack Query, 
 - `@workspace/api`: type-import `AppRouter` / `RouterInputs` / `RouterOutputs` only
 - `@workspace/db` and `@workspace/api/*` are server-only — never imported here
 - Value-import Zod from module contracts: `@workspace/<module>/contract`
-- A route uses a feature's `components/*`, `hooks.ts` and `store.ts` — never its `api.ts` or `model/*`
+- A route uses a feature's `components/*`, `hooks.ts` and `store.ts` — plus `api.ts` only inside an opt-in route `loader`; never `model/*`
 - A feature reaches another feature only through its **`api.ts`** (query options) or **`store.ts`** (actions) — e.g. posts lists authors for its picker and opens the author dialog. Never its components, hooks or model
 - Dependencies between features point one way (posts → authors, never back)
+- Cross-feature imports are absolute: `@/features/<domain>/…`. A relative `../` / `../../` that escapes the feature folder is an error
+- `components/blocks/*` may not import `features/*`, `routes/*` or `components/layout/*` — blocks are domain-free and sit below routes
 - Never invalidate another feature's keys: every successful mutation invalidates all queries (`lib/query-client.ts`)
 - Unexpected errors (a failed query or mutation, a route crash) go through `lib/report-error.ts` — the single reporting seam. Features keep showing expected errors inline; the API marks those `data.expected` (kernel domain errors), and the query cache does not report them
 - No barrel files. The folder is the namespace
@@ -45,6 +47,8 @@ features/<domain>/
 ```
 
 **Why split `api.ts` from `hooks.ts`:** query options are React-free, so loaders and other features can reuse them. `hooks.ts` stays a trivial wrapper. Mutation hooks carry no `onSuccess` cache code — refresh is global.
+
+**Routes default to component `useQuery` via `hooks.ts`.** Opt into a route `loader` only where it earns its keep: data-heavy pages that should render already-populated, hover preloading of the next page, or intercepting a 404 on a detail page. A loader reuses the same React-free `api.ts` options with `queryClient.ensureQueryData(queryOptions(...))` — the component keeps using `useQuery`, so both patterns coexist without conflict. Never fetch in a loader through `hooks.ts`.
 
 ### model/form.ts — the schema seam
 
@@ -132,20 +136,58 @@ Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
 
 ```text
 src/
-  routes/                 thin pages (loader + render feature component)
+  routes/                 thin pages; component useQuery via hooks.ts (loader only where opted in)
   features/<domain>/       api.ts · hooks.ts · model/ · components/  (see anatomy)
   components/
     blocks/              domain-free reusable UI (data-table, page-header)
-    layout/              pure layout shells (app-shell; future nav/sidebar/footer)
+    layout/              pure layout shells (app-shell holds the nav links)
     theme-provider.tsx   global theme provider
     dev-tools.tsx         DEV-only
-  hooks/                  cross-feature hooks (use-debounce, use-media-query)
-  lib/                    trpc, query-client
-  config/                 nav / site config, feature flags
+  hooks/                  cross-feature hooks (use-debounced-value.ts)
+  lib/                    trpc.ts · query-client.ts · router.ts · report-error.ts
+  config/                 placeholder (.gitkeep) — nav links live in components/layout/app-shell.tsx
   types/                  cross-cutting shared types
 test/                     Vitest + Testing Library + MSW (see Testing)
 __mocks__/zustand.ts      resets feature stores between tests
 ```
+
+## Agent notes
+
+1. **Route codegen order.** After adding or removing files under `src/routes/`, run `pnpm --filter web build` (or the dev server) to regenerate `src/routeTree.gen.ts` before `pnpm --filter web typecheck` — typecheck on a stale tree reports phantom route errors.
+2. **Dual `components.json`.** `apps/web/components.json` exists only for shadcn monorepo resolution and `@shadcn/lint`. Always run `shadcn add` inside `packages/ui` (see `packages/ui/AGENTS.md`), never in `apps/web`.
+3. **Toasts** (`@workspace/ui/components/toast`). `<Toaster />` is mounted once in `src/routes/__root.tsx` (Base UI `Toast` + the shared `toastManager`). Use `toast.success(title, opts?)` / `toast.error(…)` / `toast.info(…)` / `toast.add(…)` / `toast.promise(…)` for non-dialog feedback — but do not duplicate an error `RouteError` or an inline form/query banner already shows. `test/setup.ts` calls `toast.dismissAll()` after each test.
+
+## Minimal feature skeleton (post-demo reference)
+
+When `docs/REMOVE-DEMO.md` deletes `authors` and `posts`, this is the authoritative shape to rebuild from:
+
+```ts
+// api.ts — React-free query options; the only file another feature may import
+export const postQueryOptions = (id: number) =>
+  queryOptions({
+    queryKey: trpc.posts.byId.queryKey({ id }),
+    queryFn: () => trpc.posts.byId.query({ id }),
+  });
+
+// hooks.ts — thin wrapper, no cache or error code
+export const usePostQuery = (id: number | null) =>
+  useQuery({ ...postQueryOptions(id ?? 0), enabled: id !== null });
+
+// store.ts — one small store; export selector hooks, never the store
+export const usePostDialog = () => usePostsStore((s) => s.dialog);
+export const usePostActions = () => usePostsStore((s) => s.actions);
+
+// model/form.ts — compose from the contract; never redeclare a field
+export const postFormSchema = createPostInput
+  .pick({ authorId: true, title: true })
+  .extend({ body: z.string().optional() });
+export const toCreatePostInput = (values: PostForm): CreatePostInput => ({
+  ...values,
+  body: values.body || null,
+});
+```
+
+`components/` then holds `table.tsx`, `columns.tsx`, `form.tsx`, `dialog.tsx`.
 
 ## Commands
 

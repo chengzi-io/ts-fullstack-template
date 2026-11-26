@@ -39,6 +39,8 @@ Every module keeps its tables in `modules/<name>/src/schema.ts`. Both `drizzle.c
 
 Demo schema: **push only** — do not commit demo migrations.
 
+`pnpm db:migrate` preflights `drizzle/meta/_journal.json` (`scripts/migrate.mjs`): with no migrations it fails loud and tells you to `pnpm db:generate` first, rather than letting drizzle-kit report an empty run.
+
 ## Env (kit vs runtime)
 
 - Kit: this package `.env` (`cp .env.example .env`); scripts use `--env-file-if-exists=.env`
@@ -52,6 +54,7 @@ Demo schema: **push only** — do not commit demo migrations.
 - `dispose()` closes the client and deletes the file with `-wal` / `-shm`; it also runs when schema setup fails
 - Modules use it through `createTestContext()` (`@workspace/kernel/testing`)
 - Do not hit developer `local.db` or remote DBs
+- `test/db.test.ts` asserts `PRAGMA foreign_keys = ON` for both `createDb` and `createTestDb` — the module restrict tests depend on it, so keep that test when you touch either factory
 
 ## Switching away from libSQL
 
@@ -63,7 +66,7 @@ Modules see only `Executor` and the helpers above, so a new database stays mostl
 | `isForeignKeyViolation` | `LibsqlError` + SQLite's message | the driver's error code (Postgres `23503`); keep the `cause` walk |
 | `containsText` | `instr(lower(…))` | `ILIKE` with `%` / `_` escaped, or `strpos(lower(…))` |
 | `drizzle.config.ts` | `dialect: "turso"` | the new dialect |
-| `src/testing.ts` | `drizzle-kit export --dialect turso`, a temp file, `$client.batch` | a throwaway database or schema per test (or PGlite), created and dropped in `createTestDb` |
+| `src/testing.ts` | `drizzle-kit export --dialect turso`, a temp file, `$client.executeMultiple` | a throwaway database or schema per test (or PGlite), created and dropped in `createTestDb` |
 | `modules/*/src/schema.ts` | `sqliteTable`, `int({ mode: "timestamp_ms" })`, autoincrement | `pgTable`, `timestamp`, identity / UUID columns |
 | `apps/server/src/env.ts` | accepted URL schemes; the `file:` single-instance guard | the new schemes; drop the guard if there is no file mode |
 | `apps/server` `package.json` + `tsdown.config.ts` | `@libsql/client` is a runtime dependency kept `external` (the bundle inlines `@workspace/*`, not native drivers) | the same for the new driver |
