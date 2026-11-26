@@ -68,9 +68,10 @@ Playwright runs the built server on a fresh temp database and the built web (`vi
 
 Dependency review fails a PR only on advisories it adds. The backlog — advisories published later for what the lockfile already holds — goes to Dependabot alerts and security updates. A PR gate on the whole tree would turn every open PR red the day an advisory is published, whatever the PR changed. A scheduled `pnpm audit` would repeat the alerts with less reach: its failures sit on the Actions page and open no fix.
 
-## 16. Releases come from Conventional Commits
+## 16. Releases come from Conventional Commits via `git-cliff`
 
-PR titles are checked and become the squash commit; release-please turns them into a Release PR with the changelog and the next version. Derived projects compare their base against the tags: `scripts/init-project.mjs` resets a new project to 0.0.0 and has its first commit name the template's last release. "Use this template" copies `main`, which may be ahead of that tag, so `main` must stay usable between releases.
+- **Decision:** PR titles are checked and become the squash commit; `git-cliff` (`.github/workflows/release.yml`, `cliff.toml`) generates draft GitHub Releases from them via `workflow_dispatch` (auto-bumping or explicit tag) or a pushed `v*` tag. No `CHANGELOG.md` is kept in git, root `package.json` stays at `0.0.0`, and `scripts/init-project.mjs` runs offline with Node and Git only (no `gh`, no `CODEOWNERS`).
+- **Why:** replaced `release-please` because a bot-authored Release PR on a protected `main` required every template clone to register and install a dedicated GitHub App (`create-release-app.mjs`) just to trigger CI, and re-ran full CI (including E2E) on every merge. With tag/dispatch-only GitHub Releases, the built-in `GITHUB_TOKEN` works out of the box with zero secrets. "Use this template" copies `main`, which may be ahead of the latest tag, so `main` must stay usable between releases.
 
 ## 17. Drizzle stays on its stable release line
 

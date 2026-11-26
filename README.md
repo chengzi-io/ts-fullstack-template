@@ -46,7 +46,7 @@ AI agents write most of the code here, often several at once. The repository is 
 | Data | Drizzle ORM, libSQL (local SQLite file or Turso) |
 | Quality | TypeScript, Oxlint + Oxfmt (Ultracite, `@shadcn/lint`), Vitest, MSW, Playwright |
 | Observability | pino logs with redaction, request ids end to end, opt-in OpenTelemetry tracing |
-| Repository | pnpm workspaces, Turborepo, lefthook, commitlint, release-please, Dependabot |
+| Repository | pnpm workspaces, Turborepo, lefthook, commitlint, git-cliff, Dependabot |
 
 Every tool, its role, and where it lives: [docs/STACK.md](docs/STACK.md).
 
@@ -69,7 +69,7 @@ Open <http://localhost:5173> and try `/authors`, then `/posts`. The API (`apps/s
 ## Start a project from this template
 
 1. Click **Use this template**, create your repository, and clone it.
-2. Make it yours. The script names the package after your repository, resets the version and changelog, points LICENSE, CODEOWNERS and links at your repository, then deletes itself:
+2. Make it yours. The script names the package after your repository, points LICENSE and links at your repository, then deletes itself:
 
    ```bash
    node scripts/init-project.mjs
@@ -80,8 +80,7 @@ Open <http://localhost:5173> and try `/authors`, then `/posts`. The API (`apps/s
 3. Set up GitHub once, as a repository admin — see [Maintainer setup](CONTRIBUTING.md#maintainer-setup):
 
    ```bash
-   node scripts/github/create-release-app.mjs   # the App release-please runs as
-   scripts/github/setup-repo.sh                 # squash-only, protected main, security
+   scripts/github/setup-repo.sh   # squash-only, protected main, security
    ```
 
 4. Add your first module by copying `modules/authors` (see [AGENTS.md](AGENTS.md)), and remove the demo with [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md) when it has served its purpose.

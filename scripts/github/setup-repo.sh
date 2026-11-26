@@ -19,7 +19,7 @@ required_checks='["Validate PR title", "verify", "e2e", "dependency-review"]'
 
 echo "Configuring $repo ($branch)"
 
-# Squash only: the checked PR title becomes the commit release-please reads.
+# Squash only: the checked PR title becomes the commit git-cliff reads.
 gh api --silent --method PATCH "repos/$repo" \
   -F allow_squash_merge=true \
   -F allow_merge_commit=false \
