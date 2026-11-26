@@ -25,10 +25,10 @@
     "@shadcn/lint": "0.2.5",
     "lefthook": "^2.2.2",
     "oxfmt": "0.80.0",
-    "oxlint": "1.93.0",
+    "oxlint": "1.95.0",
     "turbo": "^2.11.13",
     "typescript": "~7.0.2",
-    "ultracite": "8.1.0",
+    "ultracite": "8.3.1",
     "vitest": "^5.1.1"
   },
   "engines": {
