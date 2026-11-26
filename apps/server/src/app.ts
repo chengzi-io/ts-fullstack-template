@@ -63,6 +63,7 @@ export function createApp(options: CreateAppOptions) {
     app.use(
       "/trpc/*",
       cors({
+        exposeHeaders: ["X-Request-Id"],
         origin: corsOrigin,
       })
     );

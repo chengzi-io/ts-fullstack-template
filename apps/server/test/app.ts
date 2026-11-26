@@ -20,12 +20,16 @@ const testRouter = createTRPCRouter({
   }),
 });
 
+export interface CreateTestAppOptions {
+  corsOrigin?: string;
+}
+
 /**
  * Real app on a fresh temp SQLite, no listening port; logs land in `logs`
  * (parsed) and `lines` (raw JSON, where duplicate keys are still visible).
  * Set `readiness.draining` to simulate a shutdown in progress.
  */
-export async function createTestApp() {
+export async function createTestApp(options: CreateTestAppOptions = {}) {
   const { db, dispose } = await createTestDb();
   const lines: string[] = [];
   const logs: Record<string, unknown>[] = [];
@@ -41,6 +45,7 @@ export async function createTestApp() {
   });
   const readiness = { draining: false };
   const app = createApp({
+    corsOrigin: options.corsOrigin,
     db,
     isDraining: () => readiness.draining,
     log,

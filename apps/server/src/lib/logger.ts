@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 import { trace } from "@opentelemetry/api";
 import pino from "pino";
 import type { DestinationStream } from "pino";
@@ -5,10 +7,23 @@ import type { DestinationStream } from "pino";
 export type { Logger } from "pino";
 
 export interface CreateLoggerOptions {
+  /** Test seam: override `pino-pretty` availability detection in development. */
+  canResolvePretty?: () => boolean;
   /** Test seam: pino writes to stdout unless a destination is injected. */
   destination?: DestinationStream;
   level: string;
   nodeEnv: string;
+}
+
+const require = createRequire(import.meta.url);
+
+function defaultCanResolvePretty(): boolean {
+  try {
+    require.resolve("pino-pretty");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const SECRET_KEYS = ["authorization", "cookie", "password", "token"];
@@ -22,6 +37,8 @@ const REDACT_PATHS = [
 
 export function createLogger(options: CreateLoggerOptions) {
   const isDev = options.nodeEnv === "development";
+  const canResolvePretty = options.canResolvePretty ?? defaultCanResolvePretty;
+  const usePretty = isDev && canResolvePretty();
 
   return pino(
     {
@@ -39,7 +56,7 @@ export function createLogger(options: CreateLoggerOptions) {
         };
       },
       redact: { censor: "[redacted]", paths: REDACT_PATHS },
-      ...(isDev
+      ...(usePretty
         ? {
             transport: {
               options: { colorize: true },

@@ -88,7 +88,6 @@ Dependency review fails a PR only on advisories it adds. The backlog — advisor
 ## Not decided yet — add when a product needs it
 
 - CORS for several origins or with credentials; CORP tuned per API
-- A fallback when `pino-pretty` fails to load in development
 - One patch schema instead of create/update pairs
 - Drizzle relational queries (schema passed to the client)
 - Rate limiting (needs a shared store once there are several instances)
