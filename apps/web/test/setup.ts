@@ -1,4 +1,5 @@
-import { cleanup, configure } from "@testing-library/react";
+import { act, cleanup, configure } from "@testing-library/react";
+import { toast } from "@workspace/ui/components/toast";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { queryClient } from "@/lib/query-client.ts";
@@ -33,6 +34,9 @@ beforeAll(() => {
 // The query client is an app singleton and the theme persists to storage;
 // clear both per test.
 afterEach(() => {
+  act(() => {
+    toast.dismissAll();
+  });
   cleanup();
   server.resetHandlers();
   queryClient.clear();
