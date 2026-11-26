@@ -39,8 +39,8 @@ function createProject(origin) {
   return dir;
 }
 
-const initProject = (dir) =>
-  spawnSync("node", ["scripts/init-project.mjs"], {
+const initProject = (dir, ...args) =>
+  spawnSync("node", ["scripts/init-project.mjs", ...args], {
     cwd: dir,
     encoding: "utf-8",
   });
@@ -76,6 +76,24 @@ test("makes the copy the new repository's own project", () => {
     { cwd: dir, encoding: "utf-8" }
   );
   expect(leftovers.stdout).toBe("");
+});
+
+test("refuses anything but owner/repo", () => {
+  for (const repo of [
+    "https://github.com/acme/my-app",
+    "acme/my-app/extra",
+    "/my-app",
+    "acme/",
+  ]) {
+    const dir = createProject("git@github.com:acme/my-app.git");
+
+    const result = initProject(dir, repo);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Expected owner/repo");
+    expect(result.stderr).toContain(repo);
+    expect(git(dir, "status", "--porcelain")).toBe("");
+  }
 });
 
 test("refuses to run on the template itself", () => {

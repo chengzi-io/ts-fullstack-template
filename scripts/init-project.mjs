@@ -52,8 +52,9 @@ function originRepo() {
 }
 
 const repo = process.argv[2] ?? originRepo();
-const [owner, name] = repo.split("/");
-if (!(owner && name)) {
+const parts = repo.split("/");
+const [owner, name] = parts;
+if (parts.length !== 2 || !(parts[0] && parts[1])) {
   throw new Error(`Expected owner/repo, got: ${repo}`);
 }
 if (repo === templateRepo) {

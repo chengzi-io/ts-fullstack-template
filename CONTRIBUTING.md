@@ -4,7 +4,7 @@ This project is a TypeScript full-stack monorepo template: Vite + React, Hono + 
 
 ## Prerequisites
 
-- **Node** — the version in [`.nvmrc`](./.nvmrc) (22)
+- **Node** — the version in [`.nvmrc`](./.nvmrc) (24)
 - **pnpm** — the version pinned by `packageManager` in [`package.json`](./package.json), enabled through `corepack enable`
 
 ## Setup

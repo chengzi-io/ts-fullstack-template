@@ -48,6 +48,13 @@ Then edit:
 
 Nothing else names the demo: the drizzle config and `createTestDb()` discover module schemas by path, and the kernel and server tests use their own routers.
 
+Optional: a few demo mentions stay in the docs and templates. They break nothing, so remove them when you get to it:
+
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — the `/posts` example in the reproduction steps
+- `apps/server/README.md` — the `authors.*` / `posts.*` demo row in the endpoint table
+- `apps/server/Dockerfile` — the `# demo, no migrations` comment
+- `apps/web/test/query-client.test.ts` — the dummy `posts` / `authors` query keys
+
 ## After delete
 
 ```bash
