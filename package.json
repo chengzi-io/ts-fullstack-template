@@ -15,6 +15,7 @@
     "e2e": "pnpm build && pnpm --filter web e2e",
     "fix": "ultracite fix",
     "prepare": "lefthook install",
+    "setup:local": "node scripts/setup-local.mjs && pnpm db:push",
     "test": "turbo test && vitest run --dir scripts --passWithNoTests",
     "test:watch": "turbo test:watch",
     "typecheck": "turbo typecheck"

@@ -57,10 +57,11 @@ Needs Node 24 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS, Linux
 ```bash
 corepack enable
 pnpm install
-cp packages/db/.env.example packages/db/.env   # DATABASE_URL=file:../../local.db
-pnpm db:push
+pnpm setup:local   # .env files from their .env.example, then db:push
 pnpm dev
 ```
+
+`pnpm setup:local` never overwrites an existing `.env`, so it is safe to re-run. Doing it by hand is `cp packages/db/.env.example packages/db/.env` (and the same for `apps/server`), then `pnpm db:push`.
 
 Open <http://localhost:5173> and try `/authors`, then `/posts`. The API (`apps/server`, port 3000) sits behind Vite's proxy at `/trpc`.
 
