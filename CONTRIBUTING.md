@@ -1,26 +1,25 @@
 # Contributing
 
-This project is a TypeScript full-stack monorepo template: Vite + React, Hono + tRPC, Drizzle + libSQL.
+TypeScript full-stack monorepo template: Vite + React, Hono + tRPC, Drizzle + libSQL.
 
 ## Prerequisites
 
-- **Node** — the version in [`.nvmrc`](./.nvmrc) (24)
-- **pnpm** — the version pinned by `packageManager` in [`package.json`](./package.json), enabled through `corepack enable`
+- **Node:** version in [`.nvmrc`](./.nvmrc) (24)
+- **pnpm:** version in `packageManager` ([`package.json`](./package.json)), enabled via `corepack enable`
 
 ## Setup
 
 ```bash
 pnpm install
-cp packages/db/.env.example packages/db/.env   # DATABASE_URL=file:../../local.db
-pnpm db:push
+pnpm setup:local   # copies .env.example files and runs pnpm db:push
 pnpm dev
 ```
 
-Web is served by Vite; the API runs from `apps/server` on port 3000 under `/trpc/*`.
+Vite serves the web app and proxies `/trpc/*` to `apps/server` on port 3000.
 
-## Gates
+## Quality gates
 
-Every change passes all of these locally. CI runs the same set and also fails when the working tree is dirty after the run (stray databases, generated files, demo migrations).
+Run all gates locally before opening a PR. CI runs the same set (plus `e2e`) and fails if the working tree is dirty afterward (stray DBs, generated files, demo migrations).
 
 ```bash
 pnpm check       # Oxlint + Oxfmt (Ultracite) lint + format (pnpm fix to autofix)
@@ -29,55 +28,48 @@ pnpm test        # package tests (Vitest)
 pnpm build       # production build
 ```
 
-Run `pnpm fix` before committing; the `lefthook` pre-commit hook runs it too.
+Run `pnpm fix` before committing; the `lefthook` pre-commit hook runs it automatically.
 
-## Workflow
+## Branching & commits
 
-**GitHub Flow**: branch off `main`, open a PR, merge, delete the branch. Never commit or push directly to `main`.
+Use **GitHub Flow**: branch off `main`, open a PR, squash-merge, delete the branch. Never commit or push directly to `main`.
 
-Branch names are `<type>/<description>` with `feat/`, `fix/`, or `chore/`, lowercase kebab-case, 2–5 words, issue number when there is one (`feat/issue-123-add-oauth`).
-
-Commits follow **Conventional Commits**:
-
-```text
-<type>(<scope>): <imperative summary>
-```
-
-The type matches the branch (also `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `style`, `revert`); scope is optional. The summary is lowercase, imperative ("add", not "added"), 72 characters at most. Breaking changes use `type(scope)!:` plus a `BREAKING CHANGE:` footer.
-
-`.commitlintrc.yaml` defines the rules and the `commit-msg` hook runs `commitlint` on every message, so a non-conforming commit is rejected locally (CI does not re-check commits: the PR title is the one that ships).
+- **Branches:** `<type>/<description>` with `feat/`, `fix/`, or `chore/`, lowercase kebab-case, 2–5 words, plus issue number when applicable (`feat/issue-123-add-oauth`).
+- **Commits:** Conventional Commits (`<type>(<scope>): <imperative summary>`). Allowed types: branch types plus `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `style`, `revert`. Scope is optional; summary is lowercase imperative ("add", not "added"), max 72 chars. Mark breaking changes with `type(scope)!:` and a `BREAKING CHANGE:` footer.
+- **Enforcement:** the `commit-msg` hook runs `commitlint` (`.commitlintrc.yaml`) locally. CI checks the PR title instead of individual commits.
 
 ## Pull requests
 
-- One concern per PR — split unrelated changes.
-- The **PR title** must be a Conventional Commit too: `Validate PR title` (`.github/workflows/pr-title.yml`) checks it against the same type list, and a squash merge turns it into the commit on `main`. Lowercase subject.
-- Fill in the PR template: what changed, why, and the checklist.
-- New behavior ships with tests; a bug fix starts with a failing test.
-- Contract changes stay additive — see the **Contract changes** section of [`AGENTS.md`](./AGENTS.md).
-- Update docs and any `AGENTS.md` whose rules your change affects.
-
-## Rules for humans and agents
-
-[`AGENTS.md`](./AGENTS.md) and the per-package `AGENTS.md` files are the rules for people and AI agents alike — AI-assisted PRs are welcome and held to the same gates. Read the root file and the `AGENTS.md` of every package you touch instead of relying on a summary here.
+- Keep one concern per PR.
+- Use a Conventional Commit **PR title** (lowercase subject); `.github/workflows/pr-title.yml` validates it because squash-merge uses it as the commit on `main`.
+- Complete the PR template (what changed, why, checklist).
+- Ship new behavior with tests; start bug fixes with a failing test.
+- Keep contract changes additive (see [Contract changes](./AGENTS.md#contract-changes)).
+- Update docs and any affected `AGENTS.md`.
+- **Humans and AI agents:** [`AGENTS.md`](./AGENTS.md) and per-package `AGENTS.md` files apply equally to both. Read the root file and the `AGENTS.md` for every package you change.
 
 ## Releases
 
-Releases are GitHub Releases generated by **git-cliff** (`.github/workflows/release.yml`, `cliff.toml`) — no `CHANGELOG.md` is tracked in git, and nothing is published to a registry. Two triggers are supported, both creating a **draft** release by default so notes can be reviewed before publishing:
+GitHub Releases are generated by **git-cliff** (`.github/workflows/release.yml`, `cliff.toml`). No `CHANGELOG.md` is tracked in git and nothing publishes to a registry. Both triggers create a **draft** release for review:
 
-- **Manual dispatch** (_Actions → Release → Run workflow_): leave `tag` empty to auto-bump from Conventional Commits since the last tag, or enter an explicit `vX.Y.Z` tag. Publishing the draft in GitHub creates the tag.
-- **Tag push**: push a `v*` tag (`git tag v0.3.0 && git push origin v0.3.0`) to generate a draft release for that tag.
+- **Manual dispatch** (_Actions → Release → Run workflow_): leave `tag` empty to auto-bump from Conventional Commits since the last tag, or provide `vX.Y.Z`. Publishing the draft creates the tag.
+- **Tag push:** push a `v*` tag (`git tag v0.3.0 && git push origin v0.3.0`) to generate a draft release for that tag.
 
 ## Dependency audits
 
-- **PRs**: `.github/workflows/dependency-review.yml` fails a PR that _adds_ a dependency with a high or critical advisory (needs a public repo or GitHub Advanced Security).
-- **Backlog**: Dependabot alerts (Security tab) cover the whole lockfile, dev dependencies included, and Dependabot security updates open the fix PRs; both are turned on by `scripts/github/setup-repo.sh`. When a parent pins a vulnerable transitive release and Dependabot cannot bump it, add a same-major entry to `overrides` in `pnpm-workspace.yaml`.
+- **PRs:** `.github/workflows/dependency-review.yml` fails when a PR introduces a dependency with a high or critical advisory (requires a public repo or GitHub Advanced Security).
+- **Backlog:** Dependabot alerts and security updates (enabled by `scripts/github/setup-repo.sh`) cover the lockfile, including dev dependencies. If a parent pins a vulnerable transitive version Dependabot cannot bump, add a same-major entry under `overrides` in `pnpm-workspace.yaml`.
 
 ## Maintainer setup
 
-One-time repository settings the workflows depend on, scripted with `gh` (log in as a repository admin):
+Run once as a repository admin with `gh` authenticated as soon as workflows are on `main` (dependency review requires it):
 
-- **Repository settings** — `scripts/github/setup-repo.sh`, as soon as the workflows are on `main` (dependency review fails until it has run): squash merge only with the PR title as the commit; branch protection requiring a PR and the `Validate PR title`, `verify`, `e2e`, and `dependency-review` checks; read-only Actions token; private vulnerability reporting, secret scanning with push protection, and Dependabot security updates. It prints the settings back so you can check them.
+```bash
+scripts/github/setup-repo.sh
+```
 
-## Security and license
+Configures squash-only merge (using the PR title), branch protection requiring PRs and `Validate PR title` / `verify` / `e2e` / `dependency-review` checks (when available), read-only Actions token, private vulnerability reporting, secret scanning with push protection, and Dependabot security updates, then prints the resulting settings.
+
+## Security & license
 
 Report vulnerabilities privately per [`SECURITY.md`](./.github/SECURITY.md), never in a public issue. Contributions are licensed under the [MIT License](./LICENSE).

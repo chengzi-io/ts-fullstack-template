@@ -6,8 +6,8 @@
 <h1>ts-fullstack-template</h1>
 
 <p>
-  A TypeScript full-stack monorepo — React, tRPC, Drizzle — shaped for AI agents.<br>
-  One capability per directory, boundaries enforced by tools, tests as the gate.
+  TypeScript full-stack monorepo (React, tRPC, Drizzle) shaped for AI agents.<br>
+  One capability per directory, tool-enforced boundaries, tests as the gate.
 </p>
 
 <p>
@@ -29,113 +29,111 @@
 </p>
 </div>
 
-## What this is and why it exists
+## Overview
 
-AI agents write most of the code here, often several at once. The repository is built so they can work in parallel without stepping on each other, and so their work is checked by tools rather than by review alone:
+Built so multiple AI agents and developers can work in parallel with minimal conflicts, backed by automated checks instead of review alone:
 
-- **One capability, one directory.** `modules/<domain>` holds a capability top to bottom — contract, schema, repo, router, tests — and `apps/web/src/features/<domain>` is its UI.
-- **Boundaries enforced by tools.** pnpm resolves only the modules a package declares; Oxlint rules block cross-module, server-only, and cross-feature imports, and `@shadcn/lint` guards design-system tokens and primitives.
-- **Contracts first.** Zod contracts give the web its types before the server exists, and MSW answers tRPC in tests, so front end and back end are built in parallel.
-- **Tests as the gate.** Router tests on a temp SQLite, host tests through `app.request()`, page tests with MSW, one Playwright E2E; CI also fails on a dirty working tree.
-- **Rules next to the code.** Every app and package, and `modules/` as a whole, has an `AGENTS.md`.
+- **One capability per directory:** `modules/<domain>` holds contract, schema, repo, router, and tests; `apps/web/src/features/<domain>` holds its UI.
+- **Tool-enforced boundaries:** pnpm resolves only declared module dependencies; Oxlint blocks cross-module, server-only, and cross-feature leaks; `@shadcn/lint` guards design-system tokens and primitives.
+- **Contracts first:** shared Zod contracts type the web before backend work lands, and MSW mocks tRPC in tests so frontend and backend move in parallel.
+- **Tests as the gate:** router tests on temp SQLite, server host tests via `app.request()`, web page tests with MSW, and one Playwright E2E test. CI also fails on a dirty working tree.
+- **Local rules next to code:** every app, package, and `modules/` has its own `AGENTS.md`.
 
 | Layer | Stack |
 | --- | --- |
 | Web | React 19, Vite, TanStack Router + Query, Zustand, React Hook Form, Tailwind CSS, Base UI (shadcn) |
-| API | Hono, tRPC 11, Zod 4 contracts shared with the web |
+| API | Hono, tRPC 11, Zod 4 contracts shared with web |
 | Data | Drizzle ORM, libSQL (local SQLite file or Turso) |
 | Quality | TypeScript, Oxlint + Oxfmt (Ultracite, `@shadcn/lint`), Vitest, MSW, Playwright |
-| Observability | pino logs with redaction, request ids end to end, opt-in OpenTelemetry tracing |
+| Observability | pino logs with redaction, end-to-end request ids, opt-in OpenTelemetry tracing |
 | Repository | pnpm workspaces, Turborepo, lefthook, commitlint, git-cliff, Dependabot |
 
-Every tool, its role, and where it lives: [docs/STACK.md](docs/STACK.md).
+Full tool inventory: [docs/STACK.md](docs/STACK.md).
 
 ## Quick start
 
-Needs Node 24 (`.nvmrc`), pnpm through corepack, and a POSIX shell (macOS, Linux, or WSL on Windows).
+Requires Node 24 (`.nvmrc`), pnpm via corepack, and a POSIX shell (macOS, Linux, or WSL).
 
 ```bash
 corepack enable
 pnpm install
-pnpm setup:local   # .env files from their .env.example, then db:push
+pnpm setup:local   # creates .env files from .env.example, then runs db:push
 pnpm dev
 ```
 
-`pnpm setup:local` never overwrites an existing `.env`, so it is safe to re-run. Doing it by hand is `cp packages/db/.env.example packages/db/.env` (and the same for `apps/server`), then `pnpm db:push`.
+`pnpm setup:local` never overwrites existing `.env` files and is safe to re-run. Manual equivalent: copy `packages/db/.env.example` and `apps/server/.env.example` to `.env`, then run `pnpm db:push`.
 
-Open <http://localhost:5173> and try `/authors`, then `/posts`. The API (`apps/server`, port 3000) sits behind Vite's proxy at `/trpc`.
+Open <http://localhost:5173> and try `/authors`, then `/posts`. Vite proxies `/trpc` to `apps/server` on port 3000.
 
 <!-- template-only -->
 
 ## Start a project from this template
 
 1. Click **Use this template**, create your repository, and clone it.
-2. Make it yours. The script names the package after your repository, points LICENSE and links at your repository, then deletes itself:
+2. Initialize project metadata (renames the package, updates LICENSE and links, then deletes itself):
 
    ```bash
    node scripts/init-project.mjs
    ```
 
-   Review the diff, commit it with the message the script prints, and push.
+   Review the diff, commit with the printed message, and push.
 
-3. Set up GitHub once, as a repository admin — see [Maintainer setup](CONTRIBUTING.md#maintainer-setup):
+3. Configure GitHub settings once as a repository admin (see [Maintainer setup](CONTRIBUTING.md#maintainer-setup)):
 
    ```bash
    scripts/github/setup-repo.sh   # squash-only, protected main, security
    ```
 
-4. Add your first module by copying `modules/authors` (see [AGENTS.md](AGENTS.md)), and remove the demo with [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md) when it has served its purpose.
+4. Copy `modules/authors` to add your first module (see [AGENTS.md](AGENTS.md)), then follow [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md) to delete the demo.
 
 <!-- /template-only -->
 
-## Usage
-
-### Layout
+## Workspace layout
 
 | Path | Role |
 | --- | --- |
-| `modules/<domain>` | A capability top to bottom: contract (Zod) · schema · repo · router · tests |
-| `apps/web` | SPA — `features/<domain>` mirrors `modules/<domain>`; routes; tRPC client |
-| `apps/server` | HTTP host — env, `createDb`, mounts `appRouter` |
-| `packages/api` | Composition — `appRouter`, one line per module |
-| `packages/kernel` | Module SDK — procedures, error mapping, context, pagination, test context |
+| `modules/<domain>` | Capability top to bottom: contract (Zod), schema, repo, router, tests |
+| `apps/web` | SPA: `features/<domain>` mirrors `modules/<domain>`, routes, tRPC client |
+| `apps/server` | HTTP host: env, `createDb`, mounts `appRouter` |
+| `packages/api` | Composition: `appRouter` (one line per module) |
+| `packages/kernel` | Module SDK: procedures, error mapping, context, pagination, test context |
 | `packages/db` | `createDb`, `Executor`, test database, drizzle config and migrations |
-| `packages/ui` | Design system |
+| `packages/ui` | Design system primitives |
 
-**Data path:** `web → tRPC (contract .input/.output) → module router → module repo → Drizzle`.
+**Data flow:** `web → tRPC (contract .input/.output) → module router → module repo → Drizzle`.
 
-### Scripts
+## Scripts
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm dev` | Run every app |
+| `pnpm dev` | Run all apps in watch mode |
 | `pnpm check` / `pnpm fix` | Lint and format (Oxlint + Oxfmt) |
 | `pnpm typecheck` | Type-check the workspace |
 | `pnpm test` | Unit and integration tests |
-| `pnpm e2e` | Build, then run Playwright against real processes (once per machine: `pnpm --filter web exec playwright install chromium`) |
+| `pnpm e2e` | Build and run Playwright against real processes (first time: `pnpm --filter web exec playwright install chromium`) |
 | `pnpm build` | Production build |
-| `pnpm db:push` | Sync the schema while it is still changing |
-| `pnpm db:generate` / `pnpm db:migrate` | Migrations, once the schema stabilizes |
+| `pnpm db:push` | Push schema directly during iteration |
+| `pnpm db:generate` / `pnpm db:migrate` | Generate and apply migrations once schema stabilizes |
 
-### Disposable demo
+## Disposable demo
 
-**Authors + posts** (a foreign key, a join on list, create and edit forms) make the stack runnable out of the box. It uses `db:push` only — do not commit demo migrations. Remove it with [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md).
+**Authors + posts** (foreign key, joined list, create/edit forms) verify the stack out of the box. It uses `db:push` only; do not commit demo migrations. Remove it using [docs/REMOVE-DEMO.md](docs/REMOVE-DEMO.md).
 
-### Docs
+## Docs
 
-- [AGENTS.md](AGENTS.md) and each package's `AGENTS.md` — boundaries and rules for humans and agents
-- [docs/DECISIONS.md](docs/DECISIONS.md) — why it is shaped this way, and what is still open
-- [docs/STACK.md](docs/STACK.md) — every tool, its role, and where it lives
+- [AGENTS.md](AGENTS.md) and per-package `AGENTS.md` — boundaries and rules for humans and agents
+- [docs/DECISIONS.md](docs/DECISIONS.md) — architecture decisions and open items
+- [docs/STACK.md](docs/STACK.md) — tools, roles, and locations
 - [apps/server/README.md](apps/server/README.md) — production build, env, probes, shutdown
 
 ## Contributing
 
-1. Create a branch off `main`: `feat/…`, `fix/…`, or `chore/…`
-2. Commit with [Conventional Commits](https://www.conventionalcommits.org/) — a hook checks each message
-3. Open a pull request; CI runs `check`, `typecheck`, `test`, `build`, and the E2E test
+1. Branch off `main`: `feat/…`, `fix/…`, or `chore/…`
+2. Write [Conventional Commits](https://www.conventionalcommits.org/) (enforced by `commit-msg` hook)
+3. Open a pull request; CI runs `check`, `typecheck`, `test`, `build`, and `e2e`
 
-Setup, quality gates, and release flow: [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately: [SECURITY.md](.github/SECURITY.md).
+Details on setup, gates, and releases: [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](.github/SECURITY.md).
 
 ## License
 
-Licensed under MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

@@ -1,13 +1,13 @@
 # @workspace/db
 
-Database plumbing shared by every module: the client, the transaction-aware `Executor` type, constraint helpers, the test database, and drizzle-kit config + migrations. **Tables and queries live in `modules/<domain>`**, not here. No Hono / tRPC / React. No `process.env` inside `createDb`. Drizzle is the stable release line, pinned exactly — not 1.0 RC (DECISIONS #17).
+Shared database plumbing: libSQL client, transaction-aware `Executor`, constraint helpers, test DB, drizzle-kit config, and migrations. Tables and queries live in `modules/<domain>`, not here. No Hono, tRPC, React, or `process.env` inside `createDb`. Drizzle stays on the stable line, pinned exact — not 1.0 RC (`docs/DECISIONS.md` #17).
 
 ## Public surface
 
-| Import | What |
+| Import | Exports |
 | --- | --- |
-| `@workspace/db` | `createDb(config)` → `ping` / `close`; `Database`; `Executor` (db or transaction); `isForeignKeyViolation(error)`; `containsText(column, q)` |
-| `@workspace/db/testing` | `createTestDb()` — tests only |
+| `@workspace/db` | `createDb(config)` (`ping`, `close`), `Database`, `Executor` (db or tx), `isForeignKeyViolation(error)`, `containsText(column, q)` |
+| `@workspace/db/testing` | `createTestDb()` (tests only) |
 
 ```ts
 const db = createDb({
@@ -18,64 +18,52 @@ await db.ping();
 db.close();
 ```
 
-## Constraints
+## Constraints & env
 
-- The host validates env and passes config into `createDb({ url, authToken? })`
-- Relative `file:` paths use **process.cwd()**; template `.env` uses `file:../../local.db` so kit (`packages/db`) and server (`apps/server`) share the monorepo-root `local.db`
-- `isForeignKeyViolation` matches SQLite's message, not `extendedCode`: an `onDelete: "restrict"` delete reports `SQLITE_CONSTRAINT_TRIGGER`
-- Never depend on `@workspace/kernel`, a module, Hono, or React — this package sits at the bottom
-
-## Schema discovery
-
-Every module keeps its tables in `modules/<name>/src/schema.ts`. Both `drizzle.config.ts` and `createTestDb()` glob that path, so adding a module needs no change here.
+- Sits at the bottom of the dependency graph: never depend on `@workspace/kernel`, any module, Hono, or React.
+- **Schema discovery:** modules keep tables in `modules/<name>/src/schema.ts`; `drizzle.config.ts` and `createTestDb()` glob that path automatically.
+- **Kit vs runtime env:** drizzle-kit loads `packages/db/.env` (`--env-file-if-exists=.env`; requires `DATABASE_URL`). At runtime, the host validates env and passes `{ url, authToken? }` to `createDb`. Never commit secrets or `*.db`.
+- **Relative `file:` paths** resolve against `process.cwd()`; template `.env` uses `file:../../local.db` so `packages/db` and `apps/server` share the repo-root `local.db`.
+- **`isForeignKeyViolation`** matches SQLite's error message, not `extendedCode` (`onDelete: "restrict"` reports `SQLITE_CONSTRAINT_TRIGGER`).
 
 ## Migrations
 
 | Phase | Command | Commit `drizzle/`? |
 | --- | --- | --- |
-| Local / shape still moving | `pnpm db:push` | No |
-| Shape stable (team / CI / prod) | `pnpm db:generate` → migrate | Yes |
+| Local / schema still moving | `pnpm db:push` | No |
+| Schema stable (team / CI / prod) | `pnpm db:generate` → `db:migrate` | Yes |
 | Clone with migrations | `pnpm db:migrate` only | Apply existing |
 
-Demo schema: **push only** — do not commit demo migrations.
-
-`pnpm db:migrate` preflights `drizzle/meta/_journal.json` (`scripts/migrate.mjs`): with no migrations it fails loud and tells you to `pnpm db:generate` first, rather than letting drizzle-kit report an empty run.
-
-## Env (kit vs runtime)
-
-- Kit: this package `.env` (`cp .env.example .env`); scripts use `--env-file-if-exists=.env`
-- `DATABASE_URL` required for kit (see `drizzle.config.ts`)
-- Runtime: host validates env, then `createDb({ url, authToken? })`
-- Never commit secrets or `*.db`
+Demo schema uses `db:push` only — do not commit demo migrations. `pnpm db:migrate` runs `scripts/migrate.mjs` to preflight `drizzle/meta/_journal.json` and fail loud if no migrations exist yet, instructing you to run `pnpm db:generate`.
 
 ## Testing
 
-- `createTestDb()` gives each caller a temp SQLite file with every module's current tables (`drizzle-kit export`, not migrations); with no modules it is empty
-- `dispose()` closes the client and deletes the file with `-wal` / `-shm`; it also runs when schema setup fails
-- Modules use it through `createTestContext()` (`@workspace/kernel/testing`)
-- Do not hit developer `local.db` or remote DBs
-- `test/db.test.ts` asserts `PRAGMA foreign_keys = ON` for both `createDb` and `createTestDb` — the module restrict tests depend on it, so keep that test when you touch either factory
+- `createTestDb()` creates a temp SQLite file populated via `drizzle-kit export` (not migrations); with no modules it is empty.
+- `dispose()` closes the client and deletes the DB file plus `-wal`/`-shm` (also runs on setup failure).
+- Modules consume it through `createTestContext()` (`@workspace/kernel/testing`). Never hit `local.db` or remote DBs.
+- `test/db.test.ts` asserts `PRAGMA foreign_keys = ON` on both `createDb` and `createTestDb`; keep it when changing either factory because module restrict tests rely on it.
 
 ## Switching away from libSQL
 
-Modules see only `Executor` and the helpers above, so a new database stays mostly inside this package. What is SQLite / libSQL specific today:
+Modules depend only on `Executor` and the helpers above, so swapping databases is mostly local to this package:
 
-| Place | Coupling | With Postgres (for example) |
+| Place | Current libSQL / SQLite coupling | Postgres example |
 | --- | --- | --- |
-| `src/index.ts` `createDb` | `@libsql/client` + `drizzle-orm/libsql` | the driver's client and drizzle adapter; keep `ping` / `close` |
-| `isForeignKeyViolation` | `LibsqlError` + SQLite's message | the driver's error code (Postgres `23503`); keep the `cause` walk |
-| `containsText` | `instr(lower(…))` | `ILIKE` with `%` / `_` escaped, or `strpos(lower(…))` |
-| `drizzle.config.ts` | `dialect: "turso"` | the new dialect |
-| `src/testing.ts` | `drizzle-kit export --dialect turso`, a temp file, `$client.executeMultiple` | a throwaway database or schema per test (or PGlite), created and dropped in `createTestDb` |
-| `modules/*/src/schema.ts` | `sqliteTable`, `int({ mode: "timestamp_ms" })`, autoincrement | `pgTable`, `timestamp`, identity / UUID columns |
-| `apps/server/src/env.ts` | accepted URL schemes; the `file:` single-instance guard | the new schemes; drop the guard if there is no file mode |
-| `apps/server` `package.json` + `tsdown.config.ts` | `@libsql/client` is a runtime dependency kept `external` (the bundle inlines `@workspace/*`, not native drivers) | the same for the new driver |
+| `src/index.ts` `createDb` | `@libsql/client` + `drizzle-orm/libsql` | driver client + drizzle adapter; keep `ping` / `close` |
+| `isForeignKeyViolation` | `LibsqlError` + SQLite message | driver error code (`23503`); keep `cause` walk |
+| `containsText` | `instr(lower(…))` | `ILIKE` (escaped `%`/`_`) or `strpos(lower(…))` |
+| `drizzle.config.ts` | `dialect: "turso"` | target dialect |
+| `src/testing.ts` | `drizzle-kit export --dialect turso`, temp file, `$client.executeMultiple` | throwaway DB/schema per test (or PGlite) |
+| `modules/*/src/schema.ts` | `sqliteTable`, `int({ mode: "timestamp_ms" })`, autoincrement | `pgTable`, `timestamp`, identity / UUID |
+| `apps/server/src/env.ts` | URL schemes; `file:` single-instance guard | new schemes; drop file guard if unused |
+| `apps/server` `package.json` + `tsdown.config.ts` | `@libsql/client` runtime dep kept `external` | same for the new driver |
 
-Then: regenerate migrations (the demo has none), keep the module tests green — they assert behavior (409 on a restricted delete, 400 on a missing reference, search matching), so they are the acceptance test for the new driver. SQLite enforces foreign keys only when the connection enables them; libSQL does, and the restrict tests would fail if that changed.
+After swapping, regenerate migrations and run module tests — they verify behavior (409 on restricted delete, 400 on missing FK, search matching) end to end.
 
 ## Commands
 
 ```bash
 pnpm db:push | db:generate | db:migrate | db:studio | db:check
 pnpm --filter @workspace/db typecheck
+pnpm --filter @workspace/db test
 ```

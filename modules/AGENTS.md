@@ -1,42 +1,41 @@
 # modules
 
-One directory per business capability. Everything the server needs for it — shape, tables, data access, procedures, tests — lives here, so one directory is the whole context for a change.
+One directory per business capability: contract, schema, repo, router, and tests live together so one directory holds the full server context.
 
 ## Anatomy (copy `authors`)
 
 ```text
 modules/<name>/
   package.json         exports ./contract ./schema ./router
-  src/contract.ts      Zod shapes + z.output types — browser-safe
+  src/contract.ts      Zod shapes + z.output types (browser-safe)
   src/schema.ts        Drizzle tables (keys → fields → timestamps)
-  src/repo.ts          create<Name>Repo(db: Executor) — the only code touching its tables
-  src/router.ts        <name>Router — procedures get the repo on ctx.<name>
+  src/repo.ts          create<Name>Repo(db: Executor) — only code touching its tables
+  src/router.ts        <name>Router — procedures read repo from ctx.<name>
   test/router.test.ts  router tests via createTestContext()
 ```
 
 ## Adding a new module
 
-1. Set `"name": "@workspace/<domain>"` in its `package.json`, add it as a workspace dependency in `packages/api` (and `apps/web` when it has UI), register the router in `packages/api/src/index.ts`, then `pnpm install` — pnpm will not resolve an unlisted module.
-2. Relative imports carry `.js` (`moduleResolution: "NodeNext"`): `./contract.js`, `./schema.js`, `./repo.js`.
-3. Tables stay in `src/schema.ts` — `drizzle.config.ts` and `createTestDb()` glob that path, so nothing needs registering.
-4. SQLite does not index foreign keys: add an explicit `index("<table>_<column>_idx").on(table.column)` for every `.references(…)` column, or the restrict check scans the table.
-5. List inputs need `.prefault({})` (Zod v4) so a zero-arg call passes, and update inputs need an empty-patch `.refine()` so `{}` is rejected instead of silently no-op'ing.
+1. Set `"name": "@workspace/<domain>"` in `package.json`, add it as a workspace dependency in `packages/api` (and `apps/web` if it has UI), mount its router in `packages/api/src/index.ts`, then run `pnpm install`.
+2. Use `.js` extensions on relative imports (`moduleResolution: "NodeNext"`): `./contract.js`, `./schema.js`, `./repo.js`.
+3. Keep tables in `src/schema.ts` (`drizzle.config.ts` and `createTestDb()` glob this path automatically).
+4. Index every `.references(…)` column explicitly (`index("<table>_<column>_idx").on(table.column)`): SQLite does not auto-index foreign keys, so restrict checks otherwise scan the table.
+5. Add `.prefault({})` (Zod v4) to list inputs so zero-arg calls work, and an empty-patch `.refine()` to update inputs so `{}` is rejected instead of silently no-oping.
 
 ## Rules
 
-- Field lists live once in `contract.ts`; inputs derive with `pick` / `partial` / `extend`
-- Repos throw `@workspace/kernel/errors` for expected failures (`NotFoundError`, `ConflictError`, `InvalidReferenceError`); the kernel maps them to tRPC codes, so routers carry no error handling
-- Constraints are the source of truth: write, then translate `isForeignKeyViolation(error)` — never look up then write (it races)
-- Repo factories take an `Executor`, so a use case can span modules inside `ctx.db.transaction((tx) => …create<X>Repo(tx)…)`
-- Name procedures after use cases. CRUD names (`list`, `byId`, `create`) suit the demo; real modules say `publish`, `cancel`, …
-- To depend on another module, add it to `package.json` and import its `contract` or `schema` — never its `router`. pnpm refuses an unlisted module, which keeps the graph one-directional (posts → authors, never back)
-- Each module has its own `contract.ts`; boundaries above are Oxlint rules
-- Logging: the kernel logs every procedure call (path, type, status, duration, request id; the root cause on a 500). Add `ctx.log.info({ postId }, "post published")` only for an event that log line cannot explain — ids, never whole inputs or personal data. An audit trail (who changed what) is a table, not a log
-- `authors` and `posts` are the disposable demo (`docs/REMOVE-DEMO.md`)
+- Define each entity's field list once in `contract.ts`; derive inputs with `pick` / `partial` / `extend`.
+- Repos throw `@workspace/kernel/errors` (`NotFoundError`, `ConflictError`, `InvalidReferenceError`); kernel middleware maps them to tRPC codes, so routers do no error handling.
+- Let DB constraints decide: write directly, then translate `isForeignKeyViolation(error)` instead of check-then-write (which races).
+- Repo factories accept an `Executor` so multi-module use cases can share a transaction: `ctx.db.transaction((tx) => …create<X>Repo(tx)…)`.
+- Name procedures after use cases (`publish`, `cancel`, …); CRUD names (`list`, `byId`, `create`) are only for the demo.
+- Cross-module dependencies must be declared in `package.json` and import only `contract` or `schema` (never `router`). pnpm enforces declaration and Oxlint enforces boundaries, keeping the graph one-way (`posts` → `authors`).
+- **Logging:** kernel already logs every procedure call (path, type, status, duration, request id, and driver root cause on 500s). Call `ctx.log.info({ postId }, "post published")` only for events that line cannot explain — log ids, never full inputs or PII. Use a table, not logs, for an audit trail.
+- `authors` and `posts` are the disposable demo (`docs/REMOVE-DEMO.md`).
 
 ## Tests
 
-`createTestContext()` (`@workspace/kernel/testing`) is a real context on a temp SQLite holding every module's tables:
+`createTestContext()` (`@workspace/kernel/testing`) creates a real context on a temp SQLite containing all module tables:
 
 ```ts
 const createCaller = createCallerFactory(
@@ -51,7 +50,7 @@ beforeEach(async () => {
 afterEach(() => dispose());
 ```
 
-Assert the codes and shapes a client sees. Mount the routers of modules you depend on when a test needs them (posts tests mount `authorsRouter`).
+Assert the codes and shapes a client sees. Mount dependency routers when needed (e.g. `posts` tests mount `authorsRouter`).
 
 ```bash
 pnpm --filter @workspace/<name> test
@@ -60,7 +59,7 @@ pnpm --filter @workspace/<name> typecheck
 
 ## Minimal module skeleton (post-demo reference)
 
-After `docs/REMOVE-DEMO.md` deletes `authors` and `posts`, this is the canonical shape:
+Canonical shape after `docs/REMOVE-DEMO.md` removes `authors` and `posts`:
 
 ```ts
 // contract.ts — Zod shapes + z.output types only; browser-safe
@@ -84,12 +83,12 @@ export const thingsTable = sqliteTable(
   (table) => [index("things_title_idx").on(table.title)]
 );
 
-// repo.ts — the only code touching the table; throws kernel errors
+// repo.ts — only code touching the table; throws kernel errors
 export function createThingsRepo(db: Executor) {
   return { byId, create, list };
 }
 
-// router.ts — procedures read the repo off ctx; no error handling
+// router.ts — procedures read repo from ctx; no error handling
 const thingsProcedure = publicProcedure.use(({ ctx, next }) =>
   next({ ctx: { things: createThingsRepo(ctx.db) } })
 );

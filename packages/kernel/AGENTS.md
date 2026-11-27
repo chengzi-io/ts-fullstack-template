@@ -1,20 +1,20 @@
 # @workspace/kernel
 
-The module SDK — what every `modules/<domain>` builds on. No business logic, no env. Never imports a module: the kernel sits below them.
+Module SDK shared by all `modules/<domain>`. No business logic, no env, never imports modules.
 
-| Export | What | Used by |
+| Export | Contents | Used by |
 | --- | --- | --- |
-| `./trpc` | `publicProcedure` / `protectedProcedure`, `createTRPCRouter`, `createCallerFactory`. Maps domain errors → tRPC codes, logs every procedure (driver-level root cause on 500s, never SQL), never sends stacks | modules, api |
+| `./trpc` | `publicProcedure`, `protectedProcedure`, `createTRPCRouter`, `createCallerFactory` (maps domain errors → tRPC codes, logs every call with driver root cause on 500s, never logs SQL or sends stacks) | modules, api |
 | `./context` | `createTRPCContext({ db, log, requestId, session? })`, `Logger` | server |
-| `./errors` | `NotFoundError` · `ConflictError` · `InvalidReferenceError`; `rootCause(error)` for logs | module repos, server |
-| `./pagination` | `paginationInput`, `paginatedOutput`, `toPaginatedResult` — browser-safe | module contracts |
+| `./errors` | `NotFoundError`, `ConflictError`, `InvalidReferenceError`, `rootCause(error)` | module repos, server |
+| `./pagination` | `paginationInput`, `paginatedOutput`, `toPaginatedResult` (browser-safe) | module contracts |
 | `./testing` | `createTestContext()`, `silentLogger` | module tests |
 
 ## Rules
 
-- A new domain error = a class in `errors.ts`, one line in `domainErrorCode` (`trpc.ts`), and a case in `test/trpc.test.ts`
-- `protectedProcedure` checks `ctx.session.user`; the template ships no auth — the host fills `session` once a product chooses one
-- Kernel tests use their own tiny router — never a demo module
+- Add a domain error in three places: class in `errors.ts`, entry in `domainErrorCode` (`trpc.ts`), test in `test/trpc.test.ts`.
+- `protectedProcedure` checks `ctx.session.user`; the template ships no auth, so the host populates `session` once auth is added.
+- Kernel tests use a local test router, never a demo module.
 
 ```bash
 pnpm --filter @workspace/kernel test
