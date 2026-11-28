@@ -16,14 +16,14 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "@trpc/server": "^11.31.2",
+    "@trpc/server": "^11.32.0",
     "@workspace/db": "workspace:*",
     "superjson": "^2.2.7",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^24.19.4",
     "typescript": "~7.0.2",
-    "vitest": "^5.1.1"
+    "vitest": "^5.1.2"
   }
 }

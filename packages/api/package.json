@@ -10,13 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trpc/server": "^11.31.2",
+    "@trpc/server": "^11.32.0",
     "@workspace/authors": "workspace:*",
     "@workspace/kernel": "workspace:*",
     "@workspace/posts": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^24.19.4",
     "typescript": "~7.0.2"
   }
 }
