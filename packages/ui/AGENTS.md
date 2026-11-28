@@ -1,6 +1,6 @@
 # @workspace/ui
 
-Shared shadcn primitives on **Base UI** — the design system every app draws from. Style, aliases and the CSS entry come from `components.json` (`base-rhea`, Tailwind v4, `src/styles/globals.css`). Import a primitive as `@workspace/ui/components/<name>`; **how** features use them is `apps/web/AGENTS.md`.
+Shared shadcn primitives on **Base UI**. Style, aliases, and CSS entry live in `components.json` (`base-rhea`, Tailwind v4, `src/styles/globals.css`). Import primitives from `@workspace/ui/components/<name>`; feature usage rules live in `apps/web/AGENTS.md`.
 
 ## Adding a primitive
 
@@ -8,17 +8,17 @@ Shared shadcn primitives on **Base UI** — the design system every app draws fr
 cd packages/ui && pnpm exec shadcn add <name>
 ```
 
-Run it inside this package, never from the root — the CLI reads this `components.json` for aliases and paths. Oxlint and Oxfmt do not check generated primitives (`oxlint.config.mts` / `oxfmt.config.mts` ignore `packages/ui/src/{components,lib,hooks}`), so the CLI's output is unverified by `pnpm check`.
+Always run inside `packages/ui`, never from the repo root, so the CLI reads this package's `components.json`. Because Oxlint and Oxfmt ignore `packages/ui/src/{components,lib,hooks}`, `pnpm check` does not verify CLI output.
 
-**Read what the CLI wrote.** It has gone wrong before:
+Verify the generated diff after every add:
 
-- `cn` must come from `@workspace/ui/lib/utils`; the CLI once emitted `import { cn } from "cn"`
-- `package.json` and the lockfile must not gain packages you did not ask for — that same run installed an unrelated npm package named `cn` (`git diff package.json pnpm-lock.yaml` after every add)
-- imports of other primitives use `@workspace/ui/components/<name>`
+- `cn` imports from `@workspace/ui/lib/utils` (not `"cn"`).
+- No unexpected packages were added to `package.json` or `pnpm-lock.yaml` (`git diff package.json pnpm-lock.yaml`).
+- Cross-primitive imports use `@workspace/ui/components/<name>`.
 
 ## Changing a primitive
 
-Only to change the design system for everyone. A one-off in a feature is a `cva` variant (`VariantProps`) or composition on the caller's side — never a fork here.
+Edit primitives here only for workspace-wide design-system changes. For feature one-offs, extend via `cva` variants (`VariantProps`) or composition at the call site.
 
 ```bash
 pnpm --filter @workspace/ui typecheck

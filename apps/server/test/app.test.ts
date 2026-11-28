@@ -1,6 +1,9 @@
+import { appRouter } from "@workspace/api";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { App } from "../src/app.js";
+import { createApp } from "../src/app.js";
+import { createLogger } from "../src/lib/logger.js";
 import { createTestApp } from "./app.js";
 
 const BODY_LIMIT_BYTES = 1024 * 1024;
@@ -175,6 +178,82 @@ describe("error contract", () => {
     expect(body.error.json.message).toBe("Internal server error");
     expect(body.error.json.data).toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
+      expected: false,
+      requestId: res.headers.get("x-request-id"),
+    });
+  });
+});
+
+describe("cors", () => {
+  test("answers preflight with Access-Control-Allow-Origin for configured origin", async () => {
+    const corsApp = await createTestApp({ corsOrigin: "https://app.example" });
+    try {
+      const res = await corsApp.app.request("/trpc/ping", {
+        headers: {
+          "access-control-request-method": "GET",
+          origin: "https://app.example",
+        },
+        method: "OPTIONS",
+      });
+
+      expect(res.status).toBe(204);
+      expect(res.headers.get("access-control-allow-origin")).toBe(
+        "https://app.example"
+      );
+    } finally {
+      await corsApp.dispose();
+    }
+  });
+
+  test("exposes X-Request-Id on /trpc/* responses for matching origin", async () => {
+    const corsApp = await createTestApp({ corsOrigin: "https://app.example" });
+    try {
+      const res = await corsApp.app.request("/trpc/ping", {
+        headers: { origin: "https://app.example" },
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("access-control-allow-origin")).toBe(
+        "https://app.example"
+      );
+      expect(res.headers.get("access-control-expose-headers")).toContain(
+        "X-Request-Id"
+      );
+    } finally {
+      await corsApp.dispose();
+    }
+  });
+
+  test("omits Access-Control-Allow-Origin when corsOrigin is not configured", async () => {
+    const res = await app.request("/trpc/ping", {
+      headers: { origin: "https://app.example" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+});
+
+describe("appRouter integration", () => {
+  test("wires @workspace/api router and kernel error formatting at runtime", async () => {
+    const silentLog = createLogger({
+      destination: { write: () => {} },
+      level: "info",
+      nodeEnv: "test",
+    });
+    const realApp = createApp({
+      db,
+      isDraining: () => false,
+      log: silentLog,
+      router: appRouter,
+    });
+
+    const res = await realApp.request("/trpc/__nonexistent");
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body.error.json.data).toMatchObject({
+      code: "NOT_FOUND",
       expected: false,
       requestId: res.headers.get("x-request-id"),
     });

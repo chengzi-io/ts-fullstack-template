@@ -72,9 +72,15 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => startShutdown({ reason: signal }));
 }
 
-for (const event of ["unhandledRejection", "uncaughtException"] as const) {
-  process.on(event, (error: unknown) => {
-    log.error({ err: error, reason: event }, "fatal process error");
-    startShutdown({ exitCode: 1, reason: event });
-  });
-}
+process.on("unhandledRejection", (error: unknown) => {
+  log.error(
+    { err: error, reason: "unhandledRejection" },
+    "fatal process error"
+  );
+  startShutdown({ exitCode: 1, reason: "unhandledRejection" });
+});
+
+process.on("uncaughtException", (error: unknown) => {
+  log.error({ err: error, reason: "uncaughtException" }, "fatal process error");
+  startShutdown({ exitCode: 1, reason: "uncaughtException", skipDrain: true });
+});

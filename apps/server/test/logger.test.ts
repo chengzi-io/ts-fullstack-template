@@ -78,4 +78,25 @@ describe("logger", () => {
       },
     });
   });
+
+  test("falls back to JSON output in development when pino-pretty is unavailable", () => {
+    const lines: string[] = [];
+    const log = createLogger({
+      canResolvePretty: () => false,
+      destination: {
+        write: (line: string) => {
+          lines.push(line);
+        },
+      },
+      level: "info",
+      nodeEnv: "development",
+    });
+
+    log.info({ hello: "world" }, "dev fallback");
+
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+      hello: "world",
+      msg: "dev fallback",
+    });
+  });
 });

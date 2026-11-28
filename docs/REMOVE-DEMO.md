@@ -1,22 +1,13 @@
 # Remove the authors / posts demo
 
-The scaffold ships a **disposable** demo so the stack is end-to-end runnable (Zod contracts, FK join, tRPC, web list/create). It is **not** a product starter. Delete it before (or as soon as) you add real modules.
+The `authors` and `posts` modules are a disposable reference to verify the stack end to end. Delete them before or right after adding your first real module.
 
-Do **not** generate or commit migrations for this demo. Use `pnpm db:push` while evaluating the template. After your real schema is stable, run `pnpm db:generate` for the first project migration.
-
-Tip: scaffold your first module by copying `modules/authors` **before** deleting the demo (see `modules/AGENTS.md`).
-
-## What the demo proves
-
-- One module per capability: `modules/authors`, `modules/posts` (contract → schema → repo → router → tests)
-- `posts.authorId → authors.id` (`onDelete: restrict`); posts depends on authors, never the reverse
-- Constraint-driven errors: unknown author → `BAD_REQUEST`; deleting an author that still has posts → `CONFLICT`
-- A repo join, so post output embeds `author: { id, name }`
-- Web: module contracts for forms, `RouterOutputs` for rows, per-feature stores, and a cross-feature dialog hand-off (`onCreated`)
+- Do **not** generate or commit migrations for the demo; use `pnpm db:push` during evaluation, then `pnpm db:generate` once your real schema stabilizes.
+- **Tip:** scaffold your first module by copying `modules/authors` **before** deleting the demo (see `modules/AGENTS.md`).
 
 ## Delete checklist
 
-Delete:
+Delete these files and directories:
 
 ```text
 modules/authors/
@@ -29,33 +20,48 @@ apps/web/test/authors-page.test.tsx
 apps/web/test/posts-page.test.tsx
 ```
 
-Two tests are not demo code but use the demo as their subject. Move them to your first module (see the tip above) before deleting the demo:
+Retarget these two non-demo tests to your first module before deleting the demo:
 
-- `apps/web/test/errors.test.tsx` — the error-reporting seam (`lib/report-error.ts`, the route error boundary), through the posts page
-- `apps/web/e2e/critical-flow.e2e.ts` — the one E2E test ([DECISIONS 14](./DECISIONS.md)), through creating an author and a post
+- `apps/web/test/errors.test.tsx` — tests `lib/report-error.ts` and the route error boundary via the posts page
+- `apps/web/e2e/critical-flow.e2e.ts` — critical-flow E2E test ([DECISIONS #14](./DECISIONS.md#14-one-e2e-test-covering-the-critical-flow)) via creating an author and post
 
-Without a module yet, delete both. `pnpm e2e` and the CI `e2e` job then fail until your first module and its critical flow exist: the E2E setup pushes the module schemas to a fresh database, and drizzle-kit finds none.
+If you have no real module yet, delete both. Note that `pnpm e2e` and the CI `e2e` job will fail until a module with tables and a critical flow exists (`drizzle-kit` finds no schemas to push).
 
-Then edit:
+Then update:
 
 | File | Change |
 | --- | --- |
-| `packages/api/src/index.ts` | Remove the two module imports and their `appRouter` lines (an empty router is fine) |
+| `packages/api/src/index.ts` | Remove demo imports and `appRouter` entries (empty router is valid) |
 | `packages/api/package.json`, `apps/web/package.json` | Remove `@workspace/authors` and `@workspace/posts` |
-| `apps/web/src/components/layout/app-shell.tsx` | Remove the Posts / Authors nav links |
-| `apps/web/src/routes/index.tsx` | Remove the "Try the demo" card and the demo from the `PageHeader` description |
-| `README.md` | Remove "try `/authors`, then `/posts`" from Quick start and the "Disposable demo" section |
+| `apps/web/src/components/layout/app-shell.tsx` | Remove Posts / Authors nav links |
+| `apps/web/src/routes/index.tsx` | Remove "Try the demo" card and demo text in `PageHeader` |
+| `README.md` | Remove "try `/authors`, then `/posts`" in Quick start and the `Disposable demo` section |
 
-Nothing else names the demo: the drizzle config and `createTestDb()` discover module schemas by path, and the kernel and server tests use their own routers.
+Drizzle config and `createTestDb()` discover schemas by glob, and kernel/server tests use their own routers, so nothing else requires edits.
 
-## After delete
+Optional non-breaking doc/test references to clean up later:
+
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — `/posts` example in reproduction steps
+- `apps/server/README.md` — `authors.*` / `posts.*` demo note in the endpoint table
+- `apps/server/Dockerfile` — `# demo, no migrations` comment
+- `apps/web/test/query-client.test.ts` — dummy `posts` / `authors` query keys
+
+## After deleting
 
 ```bash
-pnpm install                        # drop the removed workspace packages
-pnpm --filter web exec vite build   # regenerates src/routeTree.gen.ts
-pnpm fix                            # drops imports the removed card used
+pnpm install                        # drop removed workspace packages
+pnpm --filter web exec vite build   # regenerate src/routeTree.gen.ts
+pnpm fix                            # remove unused imports from index.tsx
 pnpm typecheck && pnpm check && pnpm test
 pnpm db:push                        # once your first module has tables
 ```
 
-`vite build` must run before `typecheck`: until TanStack Router regenerates `routeTree.gen.ts`, it still imports the deleted routes.
+Run `vite build` before `typecheck` so TanStack Router regenerates `routeTree.gen.ts` without the deleted routes.
+
+## What the demo covered
+
+- Capability modules (`modules/authors`, `modules/posts`: contract → schema → repo → router → tests)
+- One-way module dependency and FK restrict (`posts.authorId → authors.id`, `onDelete: restrict`)
+- Constraint-driven errors: missing author → `BAD_REQUEST`; deleting an author with posts → `CONFLICT`
+- Repo join embedding `author: { id, name }` in post outputs
+- Web patterns: contract-derived forms, `RouterOutputs`, per-feature stores, cross-feature dialog hand-off (`onCreated`)

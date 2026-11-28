@@ -58,6 +58,9 @@ async function exportSchemaScript(): Promise<string> {
     ],
     { cwd: packageRoot }
   );
+  if (stdout.trim() === "") {
+    return "";
+  }
   if (!CREATE_TABLE.test(stdout)) {
     throw new Error(`drizzle-kit export printed no tables: ${stdout}`);
   }
@@ -66,7 +69,10 @@ async function exportSchemaScript(): Promise<string> {
 
 /** Fresh SQLite file with the current schema; never touches `local.db`. */
 export async function createTestDb(): Promise<TestDatabase> {
-  schemaScript ??= exportSchemaScript();
+  schemaScript ??= exportSchemaScript().catch((error: unknown) => {
+    schemaScript = undefined;
+    throw error;
+  });
   const script = await schemaScript;
 
   const directory = await mkdtemp(path.join(tmpdir(), "workspace-test-db-"));
@@ -77,6 +83,7 @@ export async function createTestDb(): Promise<TestDatabase> {
   };
 
   try {
+    await db.$client.execute("PRAGMA foreign_keys = ON");
     if (script) {
       await db.$client.executeMultiple(script);
     }

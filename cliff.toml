@@ -7,26 +7,16 @@ breaking_always_bump_major = false
 initial_tag = "v0.1.0"
 
 [changelog]
-body = """
-{%- set breaking = commits | filter(attribute="breaking", value=true) -%}
-{% if breaking | length > 0 -%}
-### Breaking Changes
-{% for commit in breaking %}
-- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{% if commit.breaking_description %}{{ commit.breaking_description | split(pat="\n") | first | trim }}{% else %}{{ commit.message | split(pat="\n") | first | trim }}{% endif %} ({{ commit.id | truncate(length=7, end="") }})
-{%- endfor %}
+body = """{% for group, commits in commits | group_by(attribute="group") -%}
+### {{ group | striptags | trim }}
 
-{% endif -%}
-{% for group, commits in commits | group_by(attribute="group") -%}
-### {{ group | striptags | trim | upper_first }}
-{% for commit in commits %}
-- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | split(pat="\n") | first | trim }} ({{ commit.id | truncate(length=7, end="") }})
-{%- endfor %}
-
+{% for commit in commits -%}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{% if commit.breaking and commit.breaking_description %}{{ commit.breaking_description | split(pat="\n") | first | trim }}{% else %}{{ commit.message | split(pat="\n") | first | trim }}{% endif %}
+{% endfor %}
 {% endfor -%}
 {% if remote.github.owner and remote.github.repo and previous.version and version -%}
 **Full Changelog**: https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/compare/{{ previous.version }}...{{ version }}
-{% endif -%}
-"""
+{% endif -%}"""
 trim = true
 
 [git]
@@ -35,18 +25,16 @@ filter_unconventional = true
 split_commits = false
 protect_breaking_commits = true
 commit_parsers = [
-  { message = "^feat", group = "<!-- 0 -->Features" },
-  { message = "^fix", group = "<!-- 1 -->Bug Fixes" },
-  { message = "^perf", group = "<!-- 2 -->Performance" },
-  { message = "^refactor", group = "<!-- 3 -->Refactoring" },
-  { message = "^build", group = "<!-- 4 -->Build System" },
-  { message = "^revert", group = "<!-- 5 -->Reverts" },
-  { message = "^docs", group = "<!-- 6 -->Documentation" },
-  { message = "^chore\\(main\\): release", skip = true },
-  { message = "^chore\\(deps", skip = true },
-  { message = "^ci\\(deps", skip = true },
-  { message = "^chore|^ci|^style|^test", skip = true },
+  { field = "breaking", pattern = "true", group = "<!-- 0 -->Breaking Changes" },
+  { message = "^feat", group = "<!-- 1 -->Features" },
+  { message = "^fix", group = "<!-- 2 -->Bug Fixes" },
+  { message = "^perf", group = "<!-- 3 -->Performance" },
+  { message = "^revert", group = "<!-- 4 -->Reverts" },
+  { message = "^refactor", group = "<!-- 5 -->Refactoring" },
+  { message = "^build", group = "<!-- 6 -->Build System" },
+  { message = "^docs", group = "<!-- 7 -->Documentation" },
+  { message = ".*", skip = true },
 ]
 filter_commits = true
-tag_pattern = "v[0-9].*"
+tag_pattern = '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 sort_commits = "oldest"

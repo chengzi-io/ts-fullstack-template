@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { Toaster } from "@workspace/ui/components/toast";
 import { lazy, Suspense } from "react";
 
 import { AppShell } from "@/components/layout/app-shell.tsx";
@@ -32,6 +33,7 @@ function RootLayout() {
         <AppShell>
           <Outlet />
         </AppShell>
+        <Toaster />
         {DevTools ? (
           <Suspense fallback={null}>
             <DevTools />

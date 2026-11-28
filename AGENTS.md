@@ -4,100 +4,91 @@
 
 Before editing files for a substantial task:
 
-- Run `pnpm dlx @tanstack/intent@latest list` from the workspace root to see available local skills.
-- If a listed skill matches the task, run `pnpm dlx @tanstack/intent@latest load <package>#<skill>` before changing files.
-- Use the loaded `SKILL.md` guidance while making the change.
-- Monorepos: when working across packages, run the skill check from the workspace root and prefer the local skill for the package being changed.
-- Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
+- Run `pnpm exec intent list` from the workspace root to list local skills.
+- If a skill matches, run `pnpm exec intent load <package>#<skill>` and follow its `SKILL.md` guidance.
+- Prefer the most specific skill for the package or concern; load extras only when a task spans multiple areas.
+- If `intent` is unavailable or nothing matches, follow the relevant package `AGENTS.md` and source files.
 
 <!-- intent-skills:end -->
 
-# Monorepo map
+# Workspace guide
 
-Package-level rules live in each app/package `AGENTS.md`. This root file is **workspace-wide**: layout, dependency red lines, quality gates, and shared style.
+Workspace-wide layout, dependency rules, quality gates, and shared conventions. Package-specific rules live in each app/package `AGENTS.md`.
 
-**One business capability = one directory**: `modules/<domain>` holds it top to bottom; `apps/web/src/features/<domain>` is its UI. Layers live _inside_ a module.
+## Layout & dependencies
+
+One business capability = one directory: `modules/<domain>` owns it on the server, and `apps/web/src/features/<domain>` owns its UI.
 
 ```text
 modules/<domain>    one capability (demo: authors, posts) — see modules/AGENTS.md
-  src/contract.ts     Zod + types, browser-safe (the web imports this)
-  src/schema.ts       Drizzle tables
-  src/repo.ts         the only code that touches those tables
-  src/router.ts       tRPC procedures, repo on ctx.<domain>
-  test/               router tests on a temp SQLite
-packages/kernel     module SDK: procedures + error mapping, context, errors, pagination, test context
-packages/db         createDb, Executor, FK helper, createTestDb; drizzle config + migrations
+  src/contract.ts   Zod + types, browser-safe (imported by web)
+  src/schema.ts     Drizzle tables
+  src/repo.ts       only code touching those tables
+  src/router.ts     tRPC procedures, repo on ctx.<domain>
+  test/             router tests on temp SQLite
+packages/kernel     module SDK: procedures, error mapping, context, errors, pagination, test ctx
+packages/db         createDb, Executor, FK helper, createTestDb, drizzle config & migrations
 packages/api        composition only: appRouter (one line per module) + AppRouter types
 packages/ui         shared UI primitives
-apps/server         HTTP host — env, createDb, mount appRouter
-apps/web            SPA — features/<domain> mirrors modules/<domain>
+apps/server         HTTP host: env, createDb, mount appRouter
+apps/web            SPA: features/<domain> mirrors modules/<domain>
 ```
 
-```mermaid
-flowchart LR
-  web["apps/web"]
-  server["apps/server"]
-  api["packages/api"]
-  modules["modules/*"]
-  kernel["packages/kernel"]
-  db["packages/db"]
+Allowed package dependencies:
 
-  web -->|"AppRouter types"| api
-  web -->|"Zod contracts"| modules
-  server -->|"mount appRouter"| api
-  server -->|"createDb"| db
-  api -->|"one line per module"| modules
-  modules -->|"procedures · errors · pagination"| kernel
-  modules -->|"Executor · FK helper"| db
-  kernel -->|"Database type · test DB"| db
+```text
+apps/web        -> @workspace/api (types), modules/*/contract, packages/kernel/pagination, packages/ui
+apps/server     -> @workspace/api, packages/kernel, packages/db
+packages/api    -> modules/*
+modules/*       -> packages/kernel, packages/db, other modules (one-way, declared in package.json)
+packages/kernel -> packages/db
 ```
 
-**Red lines** (each is enforced by a tool, not by this text)
+### Enforced boundaries
 
 | Rule | Enforced by |
 | --- | --- |
-| Module dependencies point one way (posts → authors) | pnpm — a module resolves only modules in its `package.json` |
-| A module never imports another module's `router` or `@workspace/api` | Oxlint (`oxlint.config.mts`) |
-| `contract.ts` stays browser-safe; `router.ts` reaches data only via its repo | Oxlint |
-| `apps/web` imports module contracts, `kernel/pagination`, ui, and `AppRouter` types only | Oxlint |
-| Features reach each other only via `api.ts` / `store.ts` | Oxlint |
-| UI uses theme tokens and primitive variants (no raw colors, arbitrary non-layout values, or restyling primitives) | Oxlint (`@shadcn/lint`) |
+| Module dependencies are one-way (`posts` → `authors`) | pnpm (resolves only declared deps in `package.json`) |
+| Modules never import another module's `router` or `@workspace/api` | Oxlint (`oxlint.config.mts`) |
+| `contract.ts` stays browser-safe; `router.ts` accesses data only via its repo | Oxlint |
+| `apps/web` imports only module contracts, `kernel/pagination`, `@workspace/ui`, and `AppRouter` types | Oxlint |
+| Web features reach each other only via `api.ts` or `store.ts` | Oxlint |
+| UI uses theme tokens and primitive variants (no raw colors, arbitrary non-layout values, or restyled primitives) | Oxlint (`@shadcn/lint`) |
 
-**Add a module:** copy `modules/authors` (package.json, tsconfigs, `src/`, `test/`), add it to `packages/api` (dependency + one `appRouter` line) and, for UI, `apps/web` (dependency + `features/<name>/` + route + nav link). Its tables are picked up by the drizzle config and `createTestDb()` automatically.
+## Workflow & quality gates
 
-**Quality gates:** `pnpm typecheck` · `pnpm check` / `pnpm fix` · `pnpm test` — CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree. Commits pass `commitlint` (`.commitlintrc.yaml`, `commit-msg` hook) and PR titles pass the same Conventional Commit rules (`.github/workflows/pr-title.yml`) because the title becomes the squash commit  
-**DB (demo / local iterate):** `pnpm db:push` — real migrations after product schema stabilizes
+- **Add a module:** copy `modules/authors` (`package.json`, tsconfigs, `src/`, `test/`), register it in `packages/api` (dep + `appRouter` line) and, if it has UI, in `apps/web` (dep + `features/<name>/` + route + nav link). Drizzle config and `createTestDb()` auto-discover `modules/*/src/schema.ts`.
+- **Quality gates:** `pnpm typecheck`, `pnpm check` (`pnpm fix` to autofix), `pnpm test`. CI (`.github/workflows/ci.yml`) runs these plus `pnpm build` and fails on a dirty tree.
+- **Commits & PR titles:** `commitlint` (`.commitlintrc.yaml`, `commit-msg` hook) checks commits; `.github/workflows/pr-title.yml` checks PR titles against the same Conventional Commit rules because PR titles become squash commits.
+- **Database:** use `pnpm db:push` for demo and early iteration; switch to migrations once the product schema stabilizes.
+- **Git worktrees:** never run `lefthook install` in a secondary worktree; hooks live in shared `.git/hooks` and would overwrite the primary checkout's hooks.
 
-# Contract changes
+## Contract changes
 
-The web and server deploy separately and tRPC has no versions, so during a rolling deploy old web bundles call the new server:
+Web and server deploy independently and tRPC is unversioned, so old web bundles call the new server during rolling deploys:
 
-- One release carries only additive changes: new procedures, new optional input fields, new output fields
-- Deploy the server before the web
-- Removing or renaming a field takes two releases: stop using it in the web, then remove it from the server
-- Never tighten input validation in the release that ships the web change
+- Ship only additive changes per release: new procedures, new optional input fields, new output fields.
+- Deploy server before web.
+- Remove or rename fields across two releases: stop using them in web first, then remove them from server.
+- Never tighten input validation in the same release as the web change.
 
-# Code style
+## Code style
 
-Oxlint + Oxfmt (Ultracite presets, plus `@shadcn/lint` for design-system rules) format and lint everything; `pnpm fix` before committing (lefthook also runs it). What it cannot check is on you:
+Oxlint + Oxfmt (Ultracite presets + `@shadcn/lint`) handle formatting and lint; run `pnpm fix` before committing (lefthook also runs it). Conventions tools cannot check:
 
-- **Fail loud** — no empty `catch` or `?? default` hiding a failure; propagate, or log the root cause (`rootCause` from `@workspace/kernel/errors`)
-- **Honest names** — `PostDialog` handles create _and_ edit, so it is not `CreatePostDialog`
-- **Comments** only for what code can't say: a non-obvious decision, a workaround and its reason, an invariant
-- **Business rules** live in module repos and routers — never in the host or the web
-- **Accessibility** — every dialog has a title, icon buttons have labels, forms use the `Field` primitives
+- **Fail loud:** no empty `catch` or `?? default` masking failures; propagate or log the root cause (`rootCause` from `@workspace/kernel/errors`).
+- **Accurate names:** match actual scope (`PostDialog` handles create and edit, not `CreatePostDialog`).
+- **Minimal comments:** explain only non-obvious decisions, workarounds (with reason), or invariants.
+- **Business rules in modules:** keep domain rules in module repos and routers, never in the server host or web.
+- **Accessibility:** every dialog needs a title, icon buttons need accessible labels, and forms use `Field` primitives.
 
-# Testing
+## Testing
 
-- Vitest runs each package's `test/` (`*.test.ts`; `*.test.tsx` in `apps/web`) and the root `scripts/*.test.mjs`; import `describe` / `test` / `expect` from `vitest` (no globals)
-- Testing Trophy: integration first — module routers via `createTestContext()`, the host via `app.request()`, web pages via `renderApp()` with MSW `trpc()`. Unit tests for pure logic; E2E only for critical flows
-- Tests use a temp SQLite (`createTestDb()` / `createTestContext()`), never `local.db` or a remote DB
-- Mock only at the network or process boundary — never a workspace package
-- A bug fix starts with a test that fails; new behavior ships with tests
-- Never weaken or delete an assertion, or add `.only` / `.skip`, to get green
-- Demo code ships with its tests (the reference pattern) and is deleted with them (`docs/REMOVE-DEMO.md`)
-- `pnpm test` runs everything (Turbo caches unchanged packages); `pnpm exec vitest related <files> --run` inside a package runs only the tests that import your change
-- `pnpm e2e` builds and runs Playwright (`apps/web/e2e/*.e2e.ts`) against real processes it starts itself — a fresh temp database, `apps/server` and `vite preview` — so no dev server may be left running. Once per machine, install its browser: `pnpm --filter web exec playwright install chromium`
-- Keep suites flat; assert inside `test()`; async/await, no done callbacks
+- **Strategy (Testing Trophy):** prefer integration tests — module routers via `createTestContext()`, host via `app.request()`, web pages via `renderApp()` with MSW `trpc()`. Use unit tests for pure logic and E2E only for critical flows.
+- **Isolation:** use temp SQLite (`createTestDb()` / `createTestContext()`), never `local.db` or remote DBs. Mock only at network or process boundaries, never workspace packages.
+- **Discipline:** bug fixes start with a failing test; new behavior ships with tests. Never weaken/delete assertions or add `.only`/`.skip` to pass. Keep suites flat, assert inside `test()`, and use `async`/`await` (no `done` callbacks).
+- **Demo tests:** demo code ships with its tests as a reference and is removed with them (`docs/REMOVE-DEMO.md`).
+- **Running:** Vitest runs `<pkg>/test/*.test.ts` (`*.test.tsx` in `apps/web`) and `scripts/*.test.mjs`; import `describe`, `test`, `expect` explicitly from `vitest` (no globals). Run `pnpm test` (Turbo-cached) or `pnpm exec vitest related <files> --run` inside a package.
+- **E2E:** `pnpm e2e` builds and runs Playwright (`apps/web/e2e/*.e2e.ts`) against its own temp DB, `apps/server`, and `vite preview` (leave no dev server running). Install Chromium once per machine: `pnpm --filter web exec playwright install chromium`.
 
-Why things are the way they are: `docs/DECISIONS.md`.
+Architecture rationale: `docs/DECISIONS.md`.

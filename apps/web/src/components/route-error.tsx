@@ -13,15 +13,20 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   const requestId = requestIdOf(error);
 
   const handleRetry = useCallback(() => {
-    // Drop the cached failures before remounting, or the route renders the same
-    // bad data and throws again. Successful data stays cached.
-    queryClient
-      .resetQueries({
-        predicate: (query) => query.state.status === "error",
-        type: "all",
-      })
-      .catch((error_) => reportError(error_, { scope: "route-error" }));
-    reset();
+    const retry = async () => {
+      // Drop the cached failures before remounting, or the route renders the same
+      // bad data and throws again. Successful data stays cached.
+      try {
+        await queryClient.resetQueries({
+          predicate: (query) => query.state.status === "error",
+          type: "all",
+        });
+      } catch (error_) {
+        reportError(error_, { scope: "route-error" });
+      }
+      reset();
+    };
+    void retry();
   }, [reset]);
 
   return (

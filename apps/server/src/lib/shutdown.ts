@@ -11,6 +11,8 @@ export interface ShutdownServer {
 export interface ShutdownRequest {
   exitCode?: number;
   reason: string;
+  /** Skip the LB drain grace period (e.g. when process state is corrupted). */
+  skipDrain?: boolean;
 }
 
 interface ShutdownTimer {
@@ -59,6 +61,7 @@ export function createShutdown(options: CreateShutdownOptions) {
     timeoutMs,
   } = options;
   let completion: Promise<void> | undefined;
+  let flushDrain: (() => void) | undefined;
   let requestedExitCode = 0;
   let shutdownReason = "unknown";
 
@@ -67,10 +70,17 @@ export function createShutdown(options: CreateShutdownOptions) {
     shutdownReason = request.reason;
 
     if (completion) {
+      if (request.skipDrain) {
+        flushDrain?.();
+      }
       return completion;
     }
 
-    log.info({ drainMs, reason: shutdownReason }, "shutting down");
+    const effectiveDrainMs = request.skipDrain ? 0 : drainMs;
+    log.info(
+      { drainMs: effectiveDrainMs, reason: shutdownReason },
+      "shutting down"
+    );
     onDrainStart();
 
     completion = new Promise<void>((resolve) => {
@@ -91,6 +101,7 @@ export function createShutdown(options: CreateShutdownOptions) {
           return;
         }
         finished = true;
+        flushDrain = undefined;
         clearTimers();
 
         const finalExitCode = Math.max(exitCode, requestedExitCode);
@@ -166,8 +177,20 @@ export function createShutdown(options: CreateShutdownOptions) {
         }
       };
 
-      if (drainMs > 0) {
-        pendingTimers.push(setShutdownTimeout(closeServer, drainMs));
+      if (effectiveDrainMs > 0) {
+        const drainTimer = setShutdownTimeout(() => {
+          flushDrain = undefined;
+          closeServer();
+        }, effectiveDrainMs);
+        pendingTimers.push(drainTimer);
+        flushDrain = () => {
+          if (finished) {
+            return;
+          }
+          flushDrain = undefined;
+          clearShutdownTimeout(drainTimer);
+          closeServer();
+        };
       } else {
         closeServer();
       }

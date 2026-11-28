@@ -1,22 +1,29 @@
 # web
 
-Vite SPA. **Feature-first**, thin routes. Server state = tRPC + TanStack Query, client intent = Zustand, form values = React Hook Form. Workspace map: root `AGENTS.md`.
+Vite SPA. Feature-first, thin routes. Server state = tRPC + TanStack Query; client UI intent = Zustand; form values = React Hook Form. Workspace map: root `AGENTS.md`.
 
-## Import boundaries (Oxlint-enforced — `oxlint.config.mts` overrides)
+## Layout
 
-- `@workspace/api`: type-import `AppRouter` / `RouterInputs` / `RouterOutputs` only
-- `@workspace/db` and `@workspace/api/*` are server-only — never imported here
-- Value-import Zod from module contracts: `@workspace/<module>/contract`
-- A route uses a feature's `components/*`, `hooks.ts` and `store.ts` — never its `api.ts` or `model/*`
-- A feature reaches another feature only through its **`api.ts`** (query options) or **`store.ts`** (actions) — e.g. posts lists authors for its picker and opens the author dialog. Never its components, hooks or model
-- Dependencies between features point one way (posts → authors, never back)
-- Never invalidate another feature's keys: every successful mutation invalidates all queries (`lib/query-client.ts`)
-- Unexpected errors (a failed query or mutation, a route crash) go through `lib/report-error.ts` — the single reporting seam. Features keep showing expected errors inline; the API marks those `data.expected` (kernel domain errors), and the query cache does not report them
-- No barrel files. The folder is the namespace
+```text
+src/
+  routes/                 thin pages; component useQuery via hooks.ts (opt-in loader only)
+  features/<domain>/      api.ts · hooks.ts · store.ts · model/ · components/
+  components/
+    blocks/               domain-free reusable UI (data-table, page-header)
+    layout/               pure layout shells (app-shell holds nav links)
+    theme-provider.tsx    global theme provider
+    dev-tools.tsx         DEV-only devtools
+  hooks/                  cross-feature hooks (use-debounced-value.ts)
+  lib/                    trpc.ts · query-client.ts · router.ts · report-error.ts
+  config/                 placeholder (.gitkeep); nav links live in components/layout/app-shell.tsx
+  types/                  cross-cutting shared types
+test/                     Vitest + Testing Library + MSW
+__mocks__/zustand.ts      resets feature stores between tests
+```
 
-## Layer model
+## Layers & import boundaries
 
-Four layers, each may only depend downward:
+Four layers, downward dependencies only:
 
 | Layer | Location | Knows domain? | Example |
 | --- | --- | --- | --- |
@@ -25,56 +32,54 @@ Four layers, each may only depend downward:
 | feature | `features/<domain>` | yes | `PostDialog` |
 | layout | `components/layout` | orchestration (shell) | `AppShell` |
 
-Reusable-but-domain-free UI goes to `blocks`, not into a feature. Pure layout shells (nav/header/footer/sidebar) go to `components/layout`. Dialogs are mounted by the routes that open them — there is no app-wide outlet, so a feature's code ships with its route chunk.
+Put domain-free reusable UI in `components/blocks`, and pure layout shells (nav/header/footer/sidebar) in `components/layout`. Mount dialogs in the routes that open them (no app-wide outlet, so feature code stays in its route chunk).
 
-## Feature anatomy
+**Oxlint-enforced boundaries (`oxlint.config.mts`):**
 
-Every feature under `features/<domain>` follows the same shape. Files inside are **unprefixed** — the folder already namespaces them (`table.tsx`, not `posts-table.tsx`). Kebab-case everywhere.
+- `@workspace/api`: type-import `AppRouter` / `RouterInputs` / `RouterOutputs` only.
+- Never import `@workspace/db` or `@workspace/api/*` (server-only).
+- Value-import Zod schemas from `@workspace/<module>/contract`.
+- Routes import a feature's `components/*`, `hooks.ts`, `store.ts`, plus `api.ts` only inside an opt-in route `loader`; never `model/*`.
+- Cross-feature imports are one-way (`posts` → `authors`), absolute (`@/features/<domain>/api` or `@/features/<domain>/store`), and never touch another feature's components, hooks, or model. Relative `../` / `../../` escapes out of a feature folder are errors.
+- `components/blocks/*` cannot import `features/*`, `routes/*`, or `components/layout/*`.
+- No barrel files.
+
+**Runtime boundaries:**
+
+- Never manually invalidate another feature's query keys: every successful mutation invalidates all queries (`lib/query-client.ts`).
+- Unexpected errors (failed query/mutation, route crash) go through `lib/report-error.ts`. Expected domain errors carry `data.expected` from the API, are skipped by the query cache, and are shown inline by features.
+
+## Feature anatomy & post-demo skeleton
+
+Files inside `features/<domain>` are unprefixed kebab-case (`table.tsx`, not `posts-table.tsx`):
 
 ```text
 features/<domain>/
-  api.ts          tRPC queryOptions — NO React; what other features may import
+  api.ts          React-free tRPC queryOptions (only query file other features may import)
   hooks.ts        thin React wrappers over api.ts (use<Domain>Query, use...Mutation)
-  store.ts        this feature's Zustand store (dialog state + actions)
+  store.ts        feature Zustand store (dialog state + actions)
   model/form.ts   Zod form schema + defaults + UI↔wire mappers (to*Input)
-  components/
-    table.tsx
-    columns.tsx
-    form.tsx
-    dialog.tsx    create + edit
+  components/     table.tsx · columns.tsx · form.tsx · dialog.tsx (create + edit)
 ```
 
-**Why split `api.ts` from `hooks.ts`:** query options are React-free, so loaders and other features can reuse them. `hooks.ts` stays a trivial wrapper. Mutation hooks carry no `onSuccess` cache code — refresh is global.
+- **`api.ts` vs `hooks.ts` & route loaders:** Keep `api.ts` React-free so loaders and other features can reuse query options. Mutation hooks carry no `onSuccess` cache invalidation. Routes default to component `useQuery` via `hooks.ts`; opt into a route `loader` only for data-heavy initial render, hover preloading, or detail-page 404 interception, calling `queryClient.ensureQueryData(queryOptions(...))` with `api.ts` (never `hooks.ts`).
+- **`model/form.ts`:** Derive form schemas from contract inputs (`pick` / `extend`); never redeclare fields. Put UI-only transforms (`""` → `null`, `valueAsNumber`) in `to*Input` mappers.
 
-### model/form.ts — the schema seam
-
-Compose form schemas from domain inputs; never redeclare fields. UI-only shapes (`""` vs `null`, `valueAsNumber`) live here as `to*Input` mappers, so components and the wire never disagree.
-
-```ts
-export const postFormSchema = createPostInput
-  .pick({ authorId: true, title: true })
-  .extend({ body: z.string().optional() }); // UI "" → wire null in toCreatePostInput
-```
-
-## Server state vs client intent
-
-| Put it in… | When |
-| --- | --- |
-| TanStack Query | any server data (lists, byId, mutations, cache) |
-| URL search param (`validateSearch`) | list page / page size / search, and anything else that should survive refresh, deep-link, back button |
-| Zustand (`features/<x>/store.ts`) | UI intent another feature or the route must drive (open this dialog, then continue) and that need not deep-link |
-| `useState` | page-local (delete confirm, hover, ephemeral toggles) |
-| React Hook Form | form field values — never Zustand |
-
-Never put `posts`/`authors` rows in Zustand. Mutations refresh the cache globally; dialogs close/resume via the store.
-
-Dialogs pass `enabled: isOpen` (and edit id) into feature queries so closed dialogs don't fetch, and reset mutation error state on close. Effect deps use the stable `mutation.reset`, never the `useMutation` result object (it is new every render — depending on it caused an app-wide re-render loop).
-
-## Zustand conventions
-
-**One small store per feature**, in `features/<domain>/store.ts`. No app-wide store, so a feature adds no shared registry entry and features cannot write each other's state.
+Canonical shape (authoritative reference after `docs/REMOVE-DEMO.md` removes `authors` and `posts`):
 
 ```ts
+// api.ts — React-free query options; importable by other features and opt-in loaders
+export const postQueryOptions = (id: number) =>
+  queryOptions({
+    queryKey: trpc.posts.byId.queryKey({ id }),
+    queryFn: () => trpc.posts.byId.query({ id }),
+  });
+
+// hooks.ts — thin wrapper, no cache or error-reporting code
+export const usePostQuery = (id: number | null) =>
+  useQuery({ ...postQueryOptions(id ?? 0), enabled: id !== null });
+
+// store.ts — one small store per feature; export selector hooks, not the store
 type PostDialog =
   | { mode: "closed" }
   | { mode: "create" }
@@ -89,63 +94,58 @@ const usePostsStore = create<PostsStore>()(
     { enabled: import.meta.env.DEV, name: "posts" }
   )
 );
-
 export const usePostDialog = () => usePostsStore((s) => s.dialog);
 export const usePostActions = () => usePostsStore((s) => s.actions);
+
+// model/form.ts — derive from contract; UI↔wire mapping here
+export const postFormSchema = createPostInput
+  .pick({ authorId: true, title: true })
+  .extend({ body: z.string().optional() });
+export const toCreatePostInput = (values: PostForm): CreatePostInput => ({
+  ...values,
+  body: values.body || null,
+});
 ```
 
-Rules:
+## State & Zustand
 
-1. **Export selector hooks, not the store.** Components never call the store with no selector (that subscribes to everything).
-2. **Actions live in one `actions` object** created once — select it directly; no `useShallow`, no `useCallback` wrappers.
-3. **Model exclusive UI as a discriminated union**, not parallel booleans.
-4. **Continue another feature's flow with a callback**, not a flag naming it: `openCreateAuthor({ onCreated: openCreatePost })` — authors never learns that posts exists.
-5. `devtools` middleware, DEV-only, with a `name`. Do not `persist` transient intent (dialogs); only persist real user preferences with `partialize`.
+| Put it in | When |
+| --- | --- |
+| TanStack Query | Server data (lists, byId, mutations, cache) |
+| URL search params (`validateSearch`) | `page` / `pageSize` / `q` and state that should survive refresh, deep-link, or back navigation |
+| Zustand (`features/<x>/store.ts`) | Cross-feature or route-driven UI intent (open dialog, resume flow) that need not deep-link |
+| `useState` | Page-local ephemeral state (delete confirm, hover, toggles) |
+| React Hook Form | Form field values (never Zustand) |
 
-## shadcn / component conventions
+- Never store server rows (`posts`, `authors`) in Zustand.
+- Dialog queries pass `enabled: isOpen` (and edit id) so closed dialogs don't fetch, and reset form + mutation error state on close. Put the stable `mutation.reset` in effect deps, never the `useMutation` result object (a new reference each render causes a re-render loop).
 
-Primitives live in `@workspace/ui`; they are the vocabulary, not your canvas.
+**Zustand rules (one store per feature, no app-wide store):**
 
-1. **Never fork a primitive for a one-off.** Extend via `cva` variants (`VariantProps`) or composition. Edit `@workspace/ui` only to change the design system for everyone.
-2. **Forward `className` and merge with `cn()`** on every wrapper so callers can override.
-3. **Compose with slots, not boolean explosions.** `<Dialog><DialogContent>…` beats a `PostDialog` with eight `is*` props. Primitives are Base UI, not Radix — there is no `asChild`. A link that looks like a button is a `Link` with `buttonVariants()` (see `routes/index.tsx`); a trigger renders your element through `render={<Button … />}` (see `columns.tsx`).
-4. **Controlled dialogs**: `open` + `onOpenChange`; reset the form and mutation error when closing.
-5. **Accessibility is required, not optional**: every `DialogContent` has a title; icon-only buttons get `aria-label` / `sr-only`; forms use the `Field` / `FieldLabel` / `FieldError` primitives.
-6. **Table columns** are built by a `create<Domain>Columns({ onEdit, onDelete })` factory in `columns.tsx`, memoized where consumed, driven by `DataTable`.
-7. **Lists page and search on the server.** `DataTable` renders one page and never sorts or filters rows itself; the route keeps `page` / `pageSize` / `q` in URL search params and passes them to the list query (search is debounced with `hooks/use-debounced-value.ts`). Never fetch "all rows" — pickers search too (see the post form's author field).
-8. **A paged list never strands the user.** When a delete leaves the page past the end, step back to the last page — `routes/posts/index.tsx` does it for the URL; a list paged in local state (e.g. inside a dialog) needs the same effect. `placeholderData: keepPreviousData` is for paging or searching one list: when the list's parent changes (another post's comments), mount a fresh list, or the old parent's rows show under the new title.
+1. Export selector hooks, never the store itself (prevents whole-store subscriptions).
+2. Group actions in one `actions` object created once (no `useShallow` or `useCallback`).
+3. Model exclusive UI states as a discriminated union, not parallel booleans.
+4. Continue cross-feature flows via callbacks (`openCreateAuthor({ onCreated: openCreatePost })`) so `authors` never knows `posts` exists.
+5. Enable `devtools` in `DEV` only with a `name`. Never `persist` transient UI intent; persist only real user preferences with `partialize`.
 
-## Dev tools
+## UI primitives, tables & feedback
 
-`components/dev-tools.tsx` mounts only under `import.meta.env.DEV`, and never in Vitest (`MODE === "test"`; Agentation patches the window's timers): Router Devtools, Query Devtools, Agentation. Guarded so nothing ships to prod; these stay in `devDependencies`.
+- **Primitives (`@workspace/ui`):** Do not fork primitives for one-offs; extend with `cva` variants (`VariantProps`) or composition. Edit `@workspace/ui` only for workspace-wide design-system changes. Forward `className` and merge with `cn()`.
+- **Adding primitives:** `apps/web/components.json` exists only for shadcn monorepo resolution and `@shadcn/lint`. Always run `shadcn add` inside `packages/ui` (see `packages/ui/AGENTS.md`), never in `apps/web`.
+- **Base UI composition:** Primitives use Base UI, not Radix (no `asChild`). Style a link as a button with `Link` + `buttonVariants()` (`routes/index.tsx`); customize triggers with `render={<Button … />}` (`columns.tsx`). Prefer slot composition over boolean props.
+- **Controlled dialogs & accessibility:** Use `open` + `onOpenChange` and reset form/errors on close. Every `DialogContent` requires a title, icon-only buttons require `aria-label` or `sr-only`, and forms use `Field` / `FieldLabel` / `FieldError`.
+- **Tables & server paging:** Build columns with a memoized `create<Domain>Columns({ onEdit, onDelete })` factory in `columns.tsx` and render via `DataTable`. `DataTable` displays one server-paged/searched page and never sorts or filters locally. Keep `page` / `pageSize` / `q` in URL params (debounce search with `hooks/use-debounced-value.ts`). Never fetch all rows — pickers search too (see post form's author field).
+- **Paging edge cases:** When a delete empties the current page, step back to the last page (`routes/posts/index.tsx` for URL state; mirror in local state for paged dialogs). Use `placeholderData: keepPreviousData` only while paging/searching the same list; remount when the parent entity changes.
+- **Toasts (`@workspace/ui/components/toast`):** `<Toaster />` is mounted once in `src/routes/__root.tsx` (Base UI `Toast` + shared `toastManager`). Use `toast.success(title, opts?)`, `toast.error(…)`, `toast.info(…)`, `toast.add(…)`, or `toast.promise(…)` for non-dialog feedback. Do not duplicate errors already shown by `RouteError` or an inline banner. `test/setup.ts` calls `toast.dismissAll()` after each test.
+- **Dev tools:** `components/dev-tools.tsx` (Router Devtools, Query Devtools, Agentation) mounts only under `import.meta.env.DEV` and never in Vitest (`MODE === "test"`, because Agentation patches window timers); keep them in `devDependencies`.
 
 ## Testing
 
-- Render real components (Testing Library, jsdom); mock only the network
-- `test/msw.ts` `trpc({ "authors.list": … })` answers `httpBatchLink` calls with superjson, like the API. An unhandled request fails the test
-- `test/setup.ts` clears the shared `queryClient`; `__mocks__/zustand.ts` (Zustand's documented pattern) resets every feature store after each test
-- Render a page through its route: `Route.options.component`
-- Query by role / label as a user would; assert what the user or backend sees
-- `test/posts-page.test.tsx` is the reference page test (demo): a full flow plus an idle-render guard
-
-## Layout
-
-```text
-src/
-  routes/                 thin pages (loader + render feature component)
-  features/<domain>/       api.ts · hooks.ts · model/ · components/  (see anatomy)
-  components/
-    blocks/              domain-free reusable UI (data-table, page-header)
-    layout/              pure layout shells (app-shell; future nav/sidebar/footer)
-    theme-provider.tsx   global theme provider
-    dev-tools.tsx         DEV-only
-  hooks/                  cross-feature hooks (use-debounce, use-media-query)
-  lib/                    trpc, query-client
-  config/                 nav / site config, feature flags
-  types/                  cross-cutting shared types
-test/                     Vitest + Testing Library + MSW (see Testing)
-__mocks__/zustand.ts      resets feature stores between tests
-```
+- Render real components with Testing Library + jsdom; mock only the network.
+- `test/msw.ts` `trpc({ "authors.list": … })` answers `httpBatchLink` requests with SuperJSON; unhandled requests fail the test.
+- `test/setup.ts` resets `queryClient` and dismisses toasts; `__mocks__/zustand.ts` resets feature stores after each test.
+- Render pages via `Route.options.component`, query by role/label, and assert visible or backend outcomes.
+- `test/posts-page.test.tsx` is the reference demo page test (full CRUD flow + idle-render guard).
 
 ## Commands
 
@@ -155,3 +155,5 @@ pnpm --filter web test
 pnpm --filter web build
 pnpm check
 ```
+
+After adding or removing files under `src/routes/`, run `pnpm --filter web build` (or the dev server) to regenerate `src/routeTree.gen.ts` before running `typecheck`.

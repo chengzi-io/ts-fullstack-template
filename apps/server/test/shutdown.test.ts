@@ -17,7 +17,7 @@ function createHarness(
   } = {}
 ) {
   let finishHttpClose: (error?: Error) => void = noop;
-  const timers = new Map<number, () => void>();
+  const timers = new Map<number, { callback: () => void; token: object }>();
 
   const server = {
     close: vi.fn<(callback: (error?: Error) => void) => void>((callback) => {
@@ -33,7 +33,14 @@ function createHarness(
   const onDrainStart = vi.fn<() => void>();
 
   const shutdown = createShutdown({
-    clearTimeout: () => {},
+    clearTimeout: (timer) => {
+      for (const [milliseconds, entry] of timers.entries()) {
+        if (entry.token === timer) {
+          timers.delete(milliseconds);
+          break;
+        }
+      }
+    },
     closeDatabase,
     closeTracing,
     drainMs: options.drainMs ?? 0,
@@ -42,8 +49,9 @@ function createHarness(
     onDrainStart,
     server,
     setTimeout: (callback, milliseconds) => {
-      timers.set(milliseconds, callback);
-      return {};
+      const token = {};
+      timers.set(milliseconds, { callback, token });
+      return token;
     },
     timeoutMs: TIMEOUT_MS,
   });
@@ -53,7 +61,8 @@ function createHarness(
     closeTracing,
     exit,
     finishHttpClose: (error?: Error) => finishHttpClose(error),
-    fireTimer: (milliseconds: number) => timers.get(milliseconds)?.(),
+    fireTimer: (milliseconds: number) => timers.get(milliseconds)?.callback(),
+    hasTimer: (milliseconds: number) => timers.has(milliseconds),
     onDrainStart,
     server,
     shutdown,
@@ -193,5 +202,46 @@ describe("shutdown", () => {
     h.finishHttpClose();
     await done;
     expect(h.exit.mock.calls).toStrictEqual([[0]]);
+  });
+
+  test("skips the drain delay on uncaughtException and exits 1", async () => {
+    const h = createHarness({ drainMs: DRAIN_MS });
+
+    const done = h.shutdown({
+      exitCode: 1,
+      reason: "uncaughtException",
+      skipDrain: true,
+    });
+    expect(h.onDrainStart).toHaveBeenCalledOnce();
+    expect(h.hasTimer(DRAIN_MS)).toBe(false);
+    expect(h.server.close).toHaveBeenCalledOnce();
+
+    h.finishHttpClose();
+    await done;
+
+    expect(h.closeDatabase).toHaveBeenCalledOnce();
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
+  });
+
+  test("cancels an active drain timer if skipDrain shutdown arrives mid-drain", async () => {
+    const h = createHarness({ drainMs: DRAIN_MS });
+
+    const done = h.shutdown({ reason: "SIGTERM" });
+    expect(h.hasTimer(DRAIN_MS)).toBe(true);
+    expect(h.server.close).not.toHaveBeenCalled();
+
+    h.shutdown({
+      exitCode: 1,
+      reason: "uncaughtException",
+      skipDrain: true,
+    });
+    expect(h.hasTimer(DRAIN_MS)).toBe(false);
+    expect(h.server.close).toHaveBeenCalledOnce();
+
+    h.finishHttpClose();
+    await done;
+
+    expect(h.closeDatabase).toHaveBeenCalledOnce();
+    expect(h.exit.mock.calls).toStrictEqual([[1]]);
   });
 });

@@ -87,6 +87,7 @@ jobs:
         env:
           OUTPUT: ${{ runner.temp }}/release-notes.md
           GITHUB_REPO: ${{ github.repository }}
+          GIT_CLIFF_OFFLINE: "true"
 
       - name: Create or update GitHub Release
         if: steps.prepare.outputs.skip != 'true'

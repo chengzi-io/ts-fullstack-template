@@ -10,6 +10,7 @@ import { createTestContext } from "../src/testing.js";
 import {
   createCallerFactory,
   createTRPCRouter,
+  protectedProcedure,
   publicProcedure,
 } from "../src/trpc.js";
 
@@ -33,6 +34,8 @@ const router = createTRPCRouter({
   missing: publicProcedure.query(() => {
     throw new NotFoundError("Thing not found");
   }),
+  // Compiles only because protectedProcedure narrows `session.user`.
+  secret: protectedProcedure.query(({ ctx }) => ctx.session.user.id),
 });
 const createCaller = createCallerFactory(router);
 
@@ -42,29 +45,34 @@ interface LogEntry {
   message?: string;
 }
 
+/** Sink for every level, so a test can assert on what a procedure logged. */
+function recordingLogger(sink: LogEntry[]): Logger {
+  const record = (level: keyof Logger) => (data: object, message?: string) => {
+    sink.push({ data: data as Record<string, unknown>, level, message });
+  };
+
+  return {
+    debug: record("debug"),
+    error: record("error"),
+    info: record("info"),
+    warn: record("warn"),
+  };
+}
+
 let entries: LogEntry[];
 let caller: ReturnType<typeof createCaller>;
-let dispose: () => Promise<void>;
+let disposals: (() => Promise<void>)[];
 
 beforeEach(async () => {
   entries = [];
-  const record = (level: keyof Logger) => (data: object, message?: string) => {
-    entries.push({ data: data as Record<string, unknown>, level, message });
-  };
-  const context = await createTestContext({
-    log: {
-      debug: record("debug"),
-      error: record("error"),
-      info: record("info"),
-      warn: record("warn"),
-    },
-  });
+  disposals = [];
+  const context = await createTestContext({ log: recordingLogger(entries) });
   caller = createCaller(context.ctx);
-  ({ dispose } = context);
+  disposals.push(context.dispose);
 });
 
 afterEach(async () => {
-  await dispose();
+  await Promise.all(disposals.map((dispose) => dispose()));
 });
 
 describe("domain errors", () => {
@@ -89,6 +97,42 @@ describe("domain errors", () => {
         data: { code: "NOT_FOUND", path: "missing" },
         level: "warn",
         message: "procedure failed",
+      },
+    ]);
+  });
+});
+
+describe("protected procedure", () => {
+  test("rejects without a session and logs a warning", async () => {
+    // The beforeEach context leaves `session` null, as the template host does.
+    await expect(caller.secret()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+
+    expect(entries).toMatchObject([
+      {
+        data: { code: "UNAUTHORIZED", path: "secret" },
+        level: "warn",
+        message: "procedure failed",
+      },
+    ]);
+  });
+
+  test("returns the session user and logs the success", async () => {
+    const context = await createTestContext({
+      log: recordingLogger(entries),
+      session: { user: { id: "user-1" } },
+    });
+    disposals.push(context.dispose);
+    const authed = createCaller(context.ctx);
+
+    await expect(authed.secret()).resolves.toBe("user-1");
+
+    expect(entries).toMatchObject([
+      {
+        data: { path: "secret", status: "ok", type: "query" },
+        level: "info",
+        message: "procedure",
       },
     ]);
   });
